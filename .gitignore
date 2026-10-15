@@ -1,19 +1,34 @@
 # The Expo app has its own rules in frontend/.gitignore.
 
-# Secrets
+# Secrets (the *.example files are kept)
 .env
-.env*.local
+.env.*
+!.env.example
 
 # Dependencies
 node_modules/
 
-# Supabase CLI local state
-supabase/.temp/
-supabase/.branches/
+# Build output
+dist/
+build/
+
+# Uploaded photos and database dumps
+uploads/
+photos/
+*.dump
+*.sql.gz
+
+# Logs
+*.log
+npm-debug.log*
 
 # OS / editor
 .DS_Store
+Thumbs.db
 .vscode/
+.idea/
 
 # Claude Code settings (local only)
 .claude/
+
+docker-compose.override.yml

@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { Pressable, Text } from 'react-native';
 
 import { BRAND_COLOR } from '@/components/ui';
-import { supabase } from '@/lib/supabase';
+import { setToken } from '@/lib/api';
 
 export default function TabLayout() {
   return (
@@ -35,7 +35,7 @@ export default function TabLayout() {
 function SignOutButton() {
   return (
     <Pressable
-      onPress={() => supabase.auth.signOut()}
+      onPress={() => setToken(null)}
       accessibilityRole="button"
       className="mr-2 rounded-lg px-3 py-1.5 active:bg-slate-100">
       <Text className="text-sm font-medium text-slate-600">Sign out</Text>

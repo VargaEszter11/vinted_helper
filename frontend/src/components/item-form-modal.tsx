@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ModalSheet } from '@/components/modal-sheet';
@@ -7,7 +7,6 @@ import { Button, ErrorBanner, Field, PriceField, Segmented, STATUS_LABELS } from
 import { confirmAsync } from '@/lib/confirm';
 import { errorMessage, isValidIsoDate, parsePrice, priceToInput, todayIso } from '@/lib/format';
 import { deleteItem, newItemId, saveItem } from '@/lib/items';
-import { getSignedUrls } from '@/lib/photos';
 import type { Item, ItemPhoto, ItemStatus, ItemValues, LocalPhoto } from '@/lib/types';
 
 const STATUS_OPTIONS = (['in_stock', 'listed', 'sold'] as const).map((value) => ({
@@ -45,18 +44,12 @@ export function ItemFormModal({
   const [flaws, setFlaws] = useState(item?.flaws ?? '');
   const [keptPhotos, setKeptPhotos] = useState<ItemPhoto[]>(item?.item_photos ?? []);
   const [newPhotos, setNewPhotos] = useState<LocalPhoto[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const photoUrls = Object.fromEntries(
+    (item?.item_photos ?? []).map((photo) => [photo.storage_path, photo.url]),
+  );
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'saving' | 'deleting' | null>(null);
-
-  useEffect(() => {
-    const paths = (item?.item_photos ?? []).map((photo) => photo.storage_path);
-    if (paths.length === 0) return;
-    getSignedUrls(paths)
-      .then(setPhotoUrls)
-      .catch(() => setFormError('Could not load the existing photos.'));
-  }, [item]);
 
   /** Updates a field and clears its error as soon as the user edits it. */
   const edit = (setter: (value: string) => void, field: keyof FieldErrors) => (value: string) => {
@@ -119,7 +112,6 @@ export function ItemFormModal({
         values,
         newPhotos,
         removedPhotos: originalPhotos.filter((photo) => !keptPhotos.includes(photo)),
-        nextPosition: Math.max(-1, ...originalPhotos.map((photo) => photo.position)) + 1,
       });
       onSaved();
     } catch (e) {

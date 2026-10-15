@@ -4,9 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, ErrorBanner, Field } from '@/components/ui';
 import { errorMessage } from '@/lib/format';
-import { supabase, usernameToEmail } from '@/lib/supabase';
+import { signIn } from '@/lib/api';
 
 export default function SignInScreen() {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,18 +19,14 @@ export default function SignInScreen() {
       setError('Enter your username and password.');
       return;
     }
+    if (mode === 'register' && password.length < 8) {
+      setError('Choose a password of at least 8 characters.');
+      return;
+    }
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: usernameToEmail(username),
-        password,
-      });
-      if (error) {
-        throw error.code === 'invalid_credentials'
-          ? new Error('Wrong username or password.')
-          : error;
-      }
+      await signIn(mode, username, password);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -63,11 +60,24 @@ export default function SignInScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              autoComplete="current-password"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               onSubmitEditing={submit}
               editable={!loading}
             />
-            <Button title="Sign in" onPress={submit} loading={loading} />
+            <Button
+              title={mode === 'login' ? 'Sign in' : 'Create account'}
+              onPress={submit}
+              loading={loading}
+            />
+            <Button
+              title={mode === 'login' ? 'Create an account' : 'I already have an account'}
+              variant="secondary"
+              onPress={() => {
+                setMode(mode === 'login' ? 'register' : 'login');
+                setError(null);
+              }}
+              disabled={loading}
+            />
           </View>
         </View>
       </KeyboardAvoidingView>

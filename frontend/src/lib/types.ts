@@ -5,6 +5,8 @@ export type ItemPhoto = {
   item_id: string;
   storage_path: string;
   position: number;
+  /** Absolute, temporary link to the image. */
+  url: string;
 };
 
 export type Item = {

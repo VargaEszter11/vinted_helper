@@ -1,7 +1,6 @@
 import { randomUUID } from 'expo-crypto';
 
-import { removePhotoFiles, uploadPhoto } from '@/lib/photos';
-import { supabase } from '@/lib/supabase';
+import { api, API_URL } from '@/lib/api';
 import type { Item, ItemPhoto, ItemStatus, ItemValues, LocalPhoto } from '@/lib/types';
 
 const toNumber = (value: unknown) => (value == null ? null : Number(value));
@@ -12,7 +11,9 @@ function normalizeItem(row: Item): Item {
     bought_for: Number(row.bought_for),
     listed_for: toNumber(row.listed_for),
     sold_for: toNumber(row.sold_for),
-    item_photos: [...(row.item_photos ?? [])].sort((a, b) => a.position - b.position),
+    item_photos: [...(row.item_photos ?? [])]
+      .sort((a, b) => a.position - b.position)
+      .map((photo) => ({ ...photo, url: `${API_URL}${photo.url}` })),
   };
 }
 
@@ -20,13 +21,8 @@ export async function fetchItems(
   statuses: ItemStatus[],
   orderBy: 'created_at' | 'sold_date',
 ): Promise<Item[]> {
-  let query = supabase.from('items').select('*, item_photos(*)').in('status', statuses);
-  if (orderBy === 'sold_date') {
-    query = query.order('sold_date', { ascending: false, nullsFirst: false });
-  }
-  const { data, error } = await query.order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data as Item[]).map(normalizeItem);
+  const rows = await api<Item[]>(`/items?status=${statuses.join(',')}&orderBy=${orderBy}`);
+  return rows.map(normalizeItem);
 }
 
 /**
@@ -38,55 +34,34 @@ export async function saveItem({
   values,
   newPhotos,
   removedPhotos,
-  nextPosition,
 }: {
   id: string;
   values: ItemValues;
   newPhotos: LocalPhoto[];
   removedPhotos: ItemPhoto[];
-  nextPosition: number;
 }): Promise<void> {
-  const { error } = await supabase.from('items').upsert({ id, ...values });
-  if (error) throw error;
+  await api(`/items/${id}`, { method: 'PUT', body: values });
 
-  if (removedPhotos.length > 0) {
-    const { error: deleteError } = await supabase
-      .from('item_photos')
-      .delete()
-      .in(
-        'id',
-        removedPhotos.map((photo) => photo.id),
-      );
-    if (deleteError) throw deleteError;
-    await removePhotoFiles(removedPhotos.map((photo) => photo.storage_path));
+  for (const photo of removedPhotos) {
+    await api(`/photos/${photo.id}`, { method: 'DELETE' });
   }
 
-  if (newPhotos.length > 0) {
-    const rows = [];
-    for (const [index, photo] of newPhotos.entries()) {
-      const path = `${id}/${randomUUID()}.jpg`;
-      await uploadPhoto(path, photo.base64);
-      rows.push({ item_id: id, storage_path: path, position: nextPosition + index });
-    }
-    const { error: insertError } = await supabase.from('item_photos').insert(rows);
-    if (insertError) throw insertError;
+  // One at a time, in order, so the server assigns the positions in the order picked.
+  for (const photo of newPhotos) {
+    await api(`/items/${id}/photos`, { method: 'POST', body: { data: photo.base64 } });
   }
 }
 
 export async function markItemSold(id: string, soldFor: number, soldDate: string): Promise<void> {
-  const { error } = await supabase
-    .from('items')
-    .update({ status: 'sold', sold_for: soldFor, sold_date: soldDate })
-    .eq('id', id);
-  if (error) throw error;
+  await api(`/items/${id}/sold`, {
+    method: 'POST',
+    body: { sold_for: soldFor, sold_date: soldDate },
+  });
 }
 
 export async function deleteItem(item: Item): Promise<void> {
-  // Files first: storage access is checked against the item, so it must still exist.
-  // Photo rows are removed by the database (on delete cascade).
-  await removePhotoFiles(item.item_photos.map((photo) => photo.storage_path));
-  const { error } = await supabase.from('items').delete().eq('id', item.id);
-  if (error) throw error;
+  // The server removes the item's photos along with it.
+  await api(`/items/${item.id}`, { method: 'DELETE' });
 }
 
 export function newItemId(): string {

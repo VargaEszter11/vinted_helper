@@ -1,0 +1,17 @@
+{
+  "name": "vinted-helper-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch --env-file=.env src/server.js"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@fastify/jwt": "^9.0.1",
+    "@fastify/rate-limit": "^10.1.1",
+    "fastify": "^5.1.0",
+    "pg": "^8.13.1"
+  }
+}

@@ -44,17 +44,14 @@
           "cameraPermission": "Vinted Helper uses the camera to photograph your items."
         }
       ],
-      "expo-sqlite"
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "9b26030a-d49b-40e0-8012-9f9dc1b76f23"
-      }
+      "router": {}
     }
   }
 }
