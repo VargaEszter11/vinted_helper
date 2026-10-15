@@ -10,6 +10,13 @@ export function formatHuf(value: number): string {
   return `${rounded < 0 ? '-' : ''}${digits}${NBSP}Ft`;
 }
 
+/** Formats an ISO timestamp in the device's time zone, like "2026-10-15 13:17". */
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function formatItemCount(count: number): string {
   return `${count} ${count === 1 ? 'item' : 'items'}`;
 }

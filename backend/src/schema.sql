@@ -58,3 +58,37 @@ drop trigger if exists items_status_changed_at on items;
 create trigger items_status_changed_at
   before insert or update on items
   for each row execute function set_status_changed_at();
+
+-- Every status an item has had, with the time it changed. Kept by a trigger.
+create table if not exists item_status_history (
+  id bigint generated always as identity primary key,
+  item_id uuid not null references items (id) on delete cascade,
+  status text not null check (status in ('in_stock', 'listed', 'sold')),
+  changed_at timestamptz not null default now()
+);
+
+create index if not exists item_status_history_item_idx on item_status_history (item_id, changed_at);
+
+create or replace function log_status_change()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'INSERT' or new.status is distinct from old.status then
+    insert into item_status_history (item_id, status, changed_at)
+    values (new.id, new.status, new.status_changed_at);
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists items_log_status_change on items;
+create trigger items_log_status_change
+  after insert or update on items
+  for each row execute function log_status_change();
+
+-- Items that existed before the log: start it with their current status.
+insert into item_status_history (item_id, status, changed_at)
+select i.id, i.status, i.status_changed_at
+from items i
+where not exists (select 1 from item_status_history h where h.item_id = i.id);

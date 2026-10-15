@@ -3,11 +3,26 @@ import { Text, View } from 'react-native';
 
 import { ModalSheet } from '@/components/modal-sheet';
 import { PhotoPicker } from '@/components/photo-picker';
-import { Button, ErrorBanner, Field, PriceField, Segmented, STATUS_LABELS } from '@/components/ui';
+import {
+  Button,
+  ErrorBanner,
+  Field,
+  PriceField,
+  Segmented,
+  STATUS_LABELS,
+  StatusBadge,
+} from '@/components/ui';
 import { confirmAsync } from '@/lib/confirm';
-import { errorMessage, isValidIsoDate, parsePrice, priceToInput, todayIso } from '@/lib/format';
-import { deleteItem, newItemId, saveItem } from '@/lib/items';
-import type { Item, ItemPhoto, ItemStatus, ItemValues, LocalPhoto } from '@/lib/types';
+import {
+  errorMessage,
+  formatDateTime,
+  isValidIsoDate,
+  parsePrice,
+  priceToInput,
+  todayIso,
+} from '@/lib/format';
+import { deleteItem, fetchStatusHistory, newItemId, saveItem } from '@/lib/items';
+import type { Item, ItemPhoto, ItemStatus, ItemValues, LocalPhoto, StatusChange } from '@/lib/types';
 
 const STATUS_OPTIONS = (['in_stock', 'listed', 'sold'] as const).map((value) => ({
   value,
@@ -50,6 +65,9 @@ export function ItemFormModal({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'saving' | 'deleting' | null>(null);
+  const [showMore, setShowMore] = useState(false);
+  const [history, setHistory] = useState<StatusChange[] | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   /** Updates a field and clears its error as soon as the user edits it. */
   const edit = (setter: (value: string) => void, field: keyof FieldErrors) => (value: string) => {
@@ -98,6 +116,18 @@ export function ItemFormModal({
       measurements: optionalText(measurements),
       flaws: optionalText(flaws),
     };
+  }
+
+  async function toggleMore() {
+    const next = !showMore;
+    setShowMore(next);
+    if (!next || !item || history) return;
+    setHistoryError(null);
+    try {
+      setHistory(await fetchStatusHistory(item.id));
+    } catch (e) {
+      setHistoryError(errorMessage(e));
+    }
   }
 
   async function handleSave() {
@@ -262,6 +292,34 @@ export function ItemFormModal({
         style={MULTILINE_STYLE}
         editable={!disabled}
       />
+      {item ? (
+        <View className="gap-2">
+          <Button
+            title={showMore ? 'Less' : 'More'}
+            variant="ghost"
+            size="sm"
+            onPress={toggleMore}
+            className="self-start"
+          />
+          {showMore ? (
+            <View className="gap-2 rounded-lg border border-slate-200 p-3">
+              <Text className="text-sm font-medium text-slate-700">Status history</Text>
+              {historyError ? (
+                <Text className="text-sm text-red-600">{historyError}</Text>
+              ) : history === null ? (
+                <Text className="text-sm text-slate-500">Loading…</Text>
+              ) : (
+                history.map((change, index) => (
+                  <View key={`${change.changed_at}-${index}`} className="flex-row items-center gap-3">
+                    <StatusBadge status={change.status} />
+                    <Text className="text-sm text-slate-600">{formatDateTime(change.changed_at)}</Text>
+                  </View>
+                ))
+              )}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </ModalSheet>
   );
 }

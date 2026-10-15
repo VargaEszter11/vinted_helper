@@ -1,7 +1,14 @@
 import { randomUUID } from 'expo-crypto';
 
 import { api, API_URL } from '@/lib/api';
-import type { Item, ItemPhoto, ItemStatus, ItemValues, LocalPhoto } from '@/lib/types';
+import type {
+  Item,
+  ItemPhoto,
+  ItemStatus,
+  ItemValues,
+  LocalPhoto,
+  StatusChange,
+} from '@/lib/types';
 
 const toNumber = (value: unknown) => (value == null ? null : Number(value));
 
@@ -57,6 +64,11 @@ export async function markItemSold(id: string, soldFor: number, soldDate: string
     method: 'POST',
     body: { sold_for: soldFor, sold_date: soldDate },
   });
+}
+
+/** Every status the item has had, newest first. */
+export function fetchStatusHistory(id: string): Promise<StatusChange[]> {
+  return api<StatusChange[]>(`/items/${id}/history`);
 }
 
 export async function deleteItem(item: Item): Promise<void> {

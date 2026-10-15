@@ -1,5 +1,10 @@
 export type ItemStatus = 'in_stock' | 'listed' | 'sold';
 
+export type StatusChange = {
+  status: ItemStatus;
+  changed_at: string;
+};
+
 export type ItemPhoto = {
   id: string;
   item_id: string;

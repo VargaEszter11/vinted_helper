@@ -132,6 +132,18 @@ export default async function itemRoutes(app) {
     },
   );
 
+  app.get('/items/:id/history', { ...auth, schema: { params: idParams } }, async (req, reply) => {
+    const { rows } = await pool.query(
+      `select h.status, h.changed_at
+       from item_status_history h
+       join items i on i.id = h.item_id
+       where h.item_id = $1 and i.user_id = $2
+       order by h.changed_at desc, h.id desc`,
+      [req.params.id, req.user.sub],
+    );
+    return rows;
+  });
+
   app.delete('/items/:id', { ...auth, schema: { params: idParams } }, async (req, reply) => {
     const { rowCount } = await pool.query('delete from items where id = $1 and user_id = $2', [
       req.params.id,
