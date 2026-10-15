@@ -18,6 +18,7 @@ import {
   useWideLayout,
 } from '@/components/ui';
 import { useItemList } from '@/hooks/use-item-list';
+import { formatItemCount } from '@/lib/format';
 import type { Item, ItemStatus } from '@/lib/types';
 
 const UNSOLD: ItemStatus[] = ['in_stock', 'listed'];
@@ -128,6 +129,16 @@ export default function ItemsScreen() {
             )}
           />
         )}
+
+        {!loading && items.length > 0 ? (
+          <View className={`border-t border-slate-200 bg-white py-3 ${rowClass}`}>
+            <Text className="text-sm font-medium text-slate-700">
+              {filter === 'all'
+                ? formatItemCount(items.length)
+                : `${visibleItems.length} of ${formatItemCount(items.length)}`}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       {editing !== undefined ? (

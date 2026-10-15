@@ -72,6 +72,7 @@ Devices that are already signed in stay signed in; use the new password next tim
 - **Items** tab: unsold items (in stock or listed) with a filter, an **Add item** button and a **Mark as sold** action per row. Tap a row to edit it.
 - **Sold** tab: sold items with profit per item (`sold for − bought for`) and the total profit. Tap a row to edit it.
 - **Bought for** is the total cost of the item, including fees and shipping.
+- **Brand**, **Size**, **Measurements** and **Flaws** are optional and only shown in the item popup.
 - Photos are resized on the device (max 1600 px wide, JPEG) before upload. They are stored under `<item id>/` in the private `item-photos` bucket and shown with short-lived signed URLs.
 - Prices are in Hungarian forint and shown like `4 500 Ft`. Dates use the `YYYY-MM-DD` format.
 

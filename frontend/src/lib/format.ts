@@ -10,6 +10,10 @@ export function formatHuf(value: number): string {
   return `${rounded < 0 ? '-' : ''}${digits}${NBSP}Ft`;
 }
 
+export function formatItemCount(count: number): string {
+  return `${count} ${count === 1 ? 'item' : 'items'}`;
+}
+
 export function priceToInput(value: number | null | undefined): string {
   return value == null ? '' : String(value);
 }

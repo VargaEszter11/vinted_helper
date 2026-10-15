@@ -62,6 +62,12 @@ where user_id is null;
 
 alter table public.items alter column user_id set not null;
 
+-- Optional details, shown only in the item popup.
+alter table public.items add column if not exists brand text;
+alter table public.items add column if not exists size text;
+alter table public.items add column if not exists measurements text;
+alter table public.items add column if not exists flaws text;
+
 create index if not exists items_user_id_status_idx on public.items (user_id, status);
 drop index if exists public.items_status_idx;
 

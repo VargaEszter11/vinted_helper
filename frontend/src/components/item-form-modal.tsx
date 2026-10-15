@@ -15,7 +15,12 @@ const STATUS_OPTIONS = (['in_stock', 'listed', 'sold'] as const).map((value) => 
   label: STATUS_LABELS[value],
 }));
 
-type FieldErrors = Partial<Record<'name' | 'boughtFor' | 'listedFor' | 'soldFor' | 'soldDate', string>>;
+const MULTILINE_STYLE = { minHeight: 72, textAlignVertical: 'top' } as const;
+
+/** Empty optional text is stored as null. */
+const optionalText = (value: string) => value.trim() || null;
+
+type FieldErrors =Partial<Record<'name' | 'boughtFor' | 'listedFor' | 'soldFor' | 'soldDate', string>>;
 
 /** Add/edit popup. Pass `item: null` to add a new item. */
 export function ItemFormModal({
@@ -34,6 +39,10 @@ export function ItemFormModal({
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? 'in_stock');
   const [soldFor, setSoldFor] = useState(priceToInput(item?.sold_for));
   const [soldDate, setSoldDate] = useState(item?.sold_date ?? todayIso());
+  const [brand, setBrand] = useState(item?.brand ?? '');
+  const [size, setSize] = useState(item?.size ?? '');
+  const [measurements, setMeasurements] = useState(item?.measurements ?? '');
+  const [flaws, setFlaws] = useState(item?.flaws ?? '');
   const [keptPhotos, setKeptPhotos] = useState<ItemPhoto[]>(item?.item_photos ?? []);
   const [newPhotos, setNewPhotos] = useState<LocalPhoto[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
@@ -85,6 +94,10 @@ export function ItemFormModal({
       status,
       sold_for: status === 'sold' ? sold.value : null,
       sold_date: status === 'sold' ? soldDate.trim() : null,
+      brand: optionalText(brand),
+      size: optionalText(size),
+      measurements: optionalText(measurements),
+      flaws: optionalText(flaws),
     };
   }
 
@@ -170,6 +183,25 @@ export function ItemFormModal({
         editable={!disabled}
       />
       <View className="flex-row gap-3">
+        <Field
+          label="Brand"
+          value={brand}
+          onChangeText={setBrand}
+          placeholder="Optional"
+          editable={!disabled}
+          className="flex-1"
+        />
+        <Field
+          label="Size"
+          value={size}
+          onChangeText={setSize}
+          placeholder="Optional"
+          autoCapitalize="characters"
+          editable={!disabled}
+          className="flex-1"
+        />
+      </View>
+      <View className="flex-row gap-3">
         <PriceField
           label="Bought for (Ft)"
           value={boughtFor}
@@ -214,6 +246,24 @@ export function ItemFormModal({
           />
         </View>
       ) : null}
+      <Field
+        label="Measurements"
+        value={measurements}
+        onChangeText={setMeasurements}
+        placeholder="Optional, e.g. pit to pit 52 cm, length 70 cm"
+        multiline
+        style={MULTILINE_STYLE}
+        editable={!disabled}
+      />
+      <Field
+        label="Flaws"
+        value={flaws}
+        onChangeText={setFlaws}
+        placeholder="Optional, e.g. small stain on the left sleeve"
+        multiline
+        style={MULTILINE_STYLE}
+        editable={!disabled}
+      />
     </ModalSheet>
   );
 }

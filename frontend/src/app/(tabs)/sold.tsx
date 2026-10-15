@@ -15,7 +15,7 @@ import {
   useWideLayout,
 } from '@/components/ui';
 import { useItemList } from '@/hooks/use-item-list';
-import { formatHuf } from '@/lib/format';
+import { formatHuf, formatItemCount } from '@/lib/format';
 import type { Item, ItemStatus } from '@/lib/types';
 
 const SOLD: ItemStatus[] = ['sold'];
@@ -106,7 +106,7 @@ export default function SoldScreen() {
             <Text className="text-base font-semibold text-slate-900">
               Total profit
               <Text className="text-sm font-normal text-slate-500">
-                {`  ·  ${items.length} ${items.length === 1 ? 'item' : 'items'}`}
+                {`  ·  ${formatItemCount(items.length)}`}
               </Text>
             </Text>
             <Text className={`text-base font-bold ${profitColor(totalProfit)}`}>

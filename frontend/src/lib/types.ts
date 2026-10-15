@@ -16,13 +16,26 @@ export type Item = {
   status: ItemStatus;
   sold_for: number | null;
   sold_date: string | null;
+  brand: string | null;
+  size: string | null;
+  measurements: string | null;
+  flaws: string | null;
   created_at: string;
   item_photos: ItemPhoto[];
 };
 
 export type ItemValues = Pick<
   Item,
-  'name' | 'bought_for' | 'listed_for' | 'status' | 'sold_for' | 'sold_date'
+  | 'name'
+  | 'bought_for'
+  | 'listed_for'
+  | 'status'
+  | 'sold_for'
+  | 'sold_date'
+  | 'brand'
+  | 'size'
+  | 'measurements'
+  | 'flaws'
 >;
 
 /** A photo picked on this device that has not been uploaded yet. */

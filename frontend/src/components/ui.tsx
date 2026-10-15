@@ -137,7 +137,7 @@ export function Segmented<T extends string>({
             // The selected look goes in `style`: adding bg/shadow classes after the first render
             // makes NativeWind remount the component on iOS/Android, which crashes in dev.
             style={selected ? SEGMENT_SELECTED_STYLE : undefined}
-            className="flex-1 items-center rounded-md px-3 py-1.5">
+            className="flex-1 items-center rounded-md px-1 py-1.5">
             <Text
               numberOfLines={1}
               className={`text-sm ${selected ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>
