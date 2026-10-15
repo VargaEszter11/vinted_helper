@@ -68,6 +68,36 @@ alter table public.items add column if not exists size text;
 alter table public.items add column if not exists measurements text;
 alter table public.items add column if not exists flaws text;
 
+-- When the status last changed (e.g. when an item was listed). Kept by a trigger.
+alter table public.items add column if not exists status_changed_at timestamptz;
+
+update public.items
+set status_changed_at = case when status = 'sold' then coalesce(sold_date::timestamptz, created_at) else created_at end
+where status_changed_at is null;
+
+alter table public.items alter column status_changed_at set default now();
+alter table public.items alter column status_changed_at set not null;
+
+create or replace function public.set_status_changed_at()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if tg_op = 'INSERT' or new.status is distinct from old.status then
+    new.status_changed_at := now();
+  else
+    new.status_changed_at := old.status_changed_at;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists items_status_changed_at on public.items;
+create trigger items_status_changed_at
+  before insert or update on public.items
+  for each row execute function public.set_status_changed_at();
+
 create index if not exists items_user_id_status_idx on public.items (user_id, status);
 drop index if exists public.items_status_idx;
 

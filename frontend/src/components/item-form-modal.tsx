@@ -64,6 +64,12 @@ export function ItemFormModal({
     setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
+  /** Entering a listed price moves an in-stock item to listed. */
+  function changeListedFor(value: string) {
+    edit(setListedFor, 'listedFor')(value);
+    if (value.trim() !== '' && status === 'in_stock') setStatus('listed');
+  }
+
   function changeStatus(next: ItemStatus) {
     if (next === 'sold' && soldFor === '') setSoldFor(listedFor);
     setStatus(next);
@@ -214,7 +220,7 @@ export function ItemFormModal({
         <PriceField
           label="Listed for (Ft)"
           value={listedFor}
-          onChangeText={edit(setListedFor, 'listedFor')}
+          onChangeText={changeListedFor}
           hint="Optional"
           error={errors.listedFor}
           editable={!disabled}

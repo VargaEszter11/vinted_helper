@@ -21,6 +21,8 @@ export type Item = {
   measurements: string | null;
   flaws: string | null;
   created_at: string;
+  /** When the status last changed; set by the database. */
+  status_changed_at: string;
   item_photos: ItemPhoto[];
 };
 

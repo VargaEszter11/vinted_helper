@@ -109,13 +109,23 @@ export default function ItemsScreen() {
                   <Text numberOfLines={2} className="text-sm font-medium text-slate-900">
                     {item.name}
                   </Text>
-                  {wide ? null : <StatusBadge status={item.status} />}
+                  {wide ? null : (
+                    <View className="flex-row items-center gap-1.5">
+                      <StatusBadge status={item.status} />
+                      <Text className="text-xs text-slate-500">
+                        {item.status_changed_at.slice(0, 10)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <Money value={item.bought_for} className={moneyClass} />
                 <Money value={item.listed_for} className={moneyClass} />
                 {wide ? (
-                  <View className="w-24">
+                  <View className="w-24 gap-0.5">
                     <StatusBadge status={item.status} />
+                    <Text className="text-xs text-slate-500">
+                      {item.status_changed_at.slice(0, 10)}
+                    </Text>
                   </View>
                 ) : null}
                 <Button
