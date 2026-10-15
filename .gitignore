@@ -1,0 +1,19 @@
+# The Expo app has its own rules in frontend/.gitignore.
+
+# Secrets
+.env
+.env*.local
+
+# Dependencies
+node_modules/
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Claude Code settings (local only)
+.claude/
