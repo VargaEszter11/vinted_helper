@@ -17,6 +17,8 @@ uploads/
 photos/
 *.dump
 *.sql.gz
+backup-*.sql
+photos-*.tar.gz
 
 # Logs
 *.log

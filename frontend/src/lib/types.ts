@@ -30,6 +30,9 @@ export type Item = {
   created_at: string;
   /** When the status last changed; set by the database. */
   status_changed_at: string;
+  /** The bundle the item is listed (or was sold) in, with that bundle's price. */
+  bundle_id: string | null;
+  bundle_listed_for: number | null;
   item_photos: ItemPhoto[];
 };
 

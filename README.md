@@ -27,6 +27,32 @@ Open http://localhost:8080 (change `WEB_PORT` in `.env` to use another port). Th
 
 Data lives in the `db_data` and `uploads_data` volumes; `docker compose down` keeps them, `down -v` deletes them.
 
+## Backups
+
+Take a backup before updating the app, since the backend applies schema changes on start. Run these in the repo folder while the app is running; each writes a dated file to the current folder.
+
+```sh
+# Database (items, bundles, users, status history)
+docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > backup-$(date +%F).sql
+
+# Photos (stored separately, in the uploads_data volume)
+docker run --rm -v vinted_helper_uploads_data:/data -v "$PWD":/backup alpine \
+  tar czf /backup/photos-$(date +%F).tar.gz -C /data .
+```
+
+The volume is named after the repo folder (`vinted_helper_uploads_data` here); check with `docker volume ls` if yours differs.
+
+To restore, start from an empty database (`docker compose down -v`, then `docker compose up -d db`) and run:
+
+```sh
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"' < backup-2026-10-16.sql
+docker run --rm -v vinted_helper_uploads_data:/data -v "$PWD":/backup alpine \
+  tar xzf /backup/photos-2026-10-16.tar.gz -C /data
+docker compose up -d
+```
+
+Backup files contain your data and password hashes. Files named like the ones above (`backup-*.sql`, `photos-*.tar.gz`) are git-ignored so they can't be committed by accident; keep copies somewhere safe off the machine.
+
 ## Managing the database with pgAdmin
 
 [docker-compose.override.yml](docker-compose.override.yml) is merged in automatically on your machine and publishes Postgres on `127.0.0.1:5434` only. In pgAdmin, register a server with:
@@ -74,6 +100,8 @@ For a native app build, set `EXPO_PUBLIC_API_URL` to the public address of the A
 - **Sold** tab: sold items with profit per item (`sold for − bought for`) and the total profit. Tap a row to edit it.
 - **Bought for** is the total cost of the item, including fees and shipping.
 - **Brand**, **Size**, **Measurements** and **Flaws** are optional and only shown in the item popup.
+- **Bundles:** tap **Bundle** on the Items tab, tick the items you listed together and enter the bundle price. The items become listed and show as one group. Tap the group to change the price or unbundle; its **Sold** button sells all of them, splitting the sold price evenly (in whole forints) between the items. Setting a bundled item to In stock, or selling it on its own, takes it out of the bundle. A bundle left with a single item is dissolved; that item stays listed.
+- **Buyer bundles:** when a buyer buys several items together, tick **Sold in a bundle with other items** in the **Mark as sold** popup, tick the other items and enter the total they paid. All of them are marked sold and the price is split evenly, like a bundle you listed.
 - Photos are resized on the device (max 1600 px wide, JPEG) before upload and stored on the API's `photos` volume. They are served through signed links that expire.
 - Prices are in Hungarian forint and shown like `4 500 Ft`. Dates use the `YYYY-MM-DD` format.
 

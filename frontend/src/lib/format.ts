@@ -17,6 +17,19 @@ export function formatDateTime(iso: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/**
+ * Splits a price evenly into `count` shares that add up exactly to it, like the server
+ * does for bundle sales: whole forints when the price is whole (10 000 / 3 -> 3 334, 3 333, 3 333).
+ */
+export function splitEvenly(total: number, count: number): number[] {
+  const cents = Math.round(total * 100);
+  const unit = cents % 100 === 0 ? 100 : 1;
+  const units = cents / unit;
+  const base = Math.floor(units / count);
+  const remainder = units % count;
+  return Array.from({ length: count }, (_, i) => ((base + (i < remainder ? 1 : 0)) * unit) / 100);
+}
+
 export function formatItemCount(count: number): string {
   return `${count} ${count === 1 ? 'item' : 'items'}`;
 }

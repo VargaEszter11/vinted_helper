@@ -1,11 +1,12 @@
 import { STATUSES } from '../config.js';
 import { pool } from '../db.js';
+import { dissolveSmallBundles } from '../lib/bundles.js';
 import { deleteItemPhotoFiles } from '../lib/photo-files.js';
 import { photoLink } from '../lib/photo-links.js';
 import { idParams, isoDate, price } from './schemas.js';
 
 const ITEM_SELECT = `
-  select i.*,
+  select i.*, b.listed_for as bundle_listed_for,
     coalesce(
       json_agg(
         json_build_object('id', p.id, 'item_id', p.item_id, 'storage_path', p.storage_path, 'position', p.position)
@@ -14,6 +15,7 @@ const ITEM_SELECT = `
       '[]'
     ) as item_photos
   from items i
+  left join bundles b on b.id = i.bundle_id
   left join item_photos p on p.item_id = i.id`;
 
 const withPhotoLinks = (row) => ({
@@ -68,7 +70,7 @@ export default async function itemRoutes(app) {
           ? 'i.sold_date desc nulls last, i.created_at desc'
           : 'i.created_at desc';
       const { rows } = await pool.query(
-        `${ITEM_SELECT} where i.user_id = $1 and i.status = any($2) group by i.id order by ${order}`,
+        `${ITEM_SELECT} where i.user_id = $1 and i.status = any($2) group by i.id, b.id order by ${order}`,
         [req.user.sub, statuses],
       );
       return rows.map(withPhotoLinks);
@@ -88,7 +90,11 @@ export default async function itemRoutes(app) {
        on conflict (id) do update set
          name = excluded.name, bought_for = excluded.bought_for, listed_for = excluded.listed_for,
          status = excluded.status, sold_for = excluded.sold_for, sold_date = excluded.sold_date,
-         brand = excluded.brand, size = excluded.size, measurements = excluded.measurements, flaws = excluded.flaws
+         brand = excluded.brand, size = excluded.size, measurements = excluded.measurements, flaws = excluded.flaws,
+         -- Taking an item off the market (in stock) or selling it on its own takes it out of its bundle.
+         bundle_id = case
+           when excluded.status = items.status or excluded.status = 'listed' then items.bundle_id
+         end
        where items.user_id = excluded.user_id`,
       [
         req.params.id,
@@ -106,6 +112,7 @@ export default async function itemRoutes(app) {
       ],
     );
     if (rowCount === 0) return reply.code(404).send({ message: 'Item not found.' });
+    await dissolveSmallBundles(req.user.sub);
     return { ok: true };
   });
 
@@ -123,11 +130,14 @@ export default async function itemRoutes(app) {
       },
     },
     async (req, reply) => {
+      // Sold on its own, so it leaves its bundle (bundles are sold with POST /bundles/:id/sold).
       const { rowCount } = await pool.query(
-        `update items set status = 'sold', sold_for = $3, sold_date = $4 where id = $1 and user_id = $2`,
+        `update items set status = 'sold', sold_for = $3, sold_date = $4, bundle_id = null
+         where id = $1 and user_id = $2`,
         [req.params.id, req.user.sub, req.body.sold_for, req.body.sold_date],
       );
       if (rowCount === 0) return reply.code(404).send({ message: 'Item not found.' });
+      await dissolveSmallBundles(req.user.sub);
       return { ok: true };
     },
   );
@@ -151,6 +161,7 @@ export default async function itemRoutes(app) {
     ]);
     if (rowCount === 0) return reply.code(404).send({ message: 'Item not found.' });
     await deleteItemPhotoFiles(req.params.id);
+    await dissolveSmallBundles(req.user.sub);
     return { ok: true };
   });
 }

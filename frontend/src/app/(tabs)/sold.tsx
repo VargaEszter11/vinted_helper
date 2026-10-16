@@ -83,6 +83,9 @@ export default function SoldScreen() {
                       {item.name}
                     </Text>
                     {wide ? null : <Text className="text-xs text-slate-500">{item.sold_date}</Text>}
+                    {item.bundle_id ? (
+                      <Text className="text-xs font-medium text-teal-700">Sold in a bundle</Text>
+                    ) : null}
                   </View>
                   <Money value={item.bought_for} className={moneyClass} />
                   <Money value={item.sold_for} className={moneyClass} />

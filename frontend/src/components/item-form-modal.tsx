@@ -16,6 +16,7 @@ import { confirmAsync } from '@/lib/confirm';
 import {
   errorMessage,
   formatDateTime,
+  formatHuf,
   isValidIsoDate,
   parsePrice,
   priceToInput,
@@ -252,6 +253,12 @@ export function ItemFormModal({
       <View className="gap-1">
         <Text className="text-sm font-medium text-slate-700">Status</Text>
         <Segmented options={STATUS_OPTIONS} value={status} onChange={changeStatus} disabled={disabled} />
+        {item?.bundle_id && item.status === 'listed' && item.bundle_listed_for !== null ? (
+          <Text className="text-xs text-slate-500">
+            Part of a bundle listed for {formatHuf(item.bundle_listed_for)}. Setting it to In
+            stock or Sold takes it out of the bundle.
+          </Text>
+        ) : null}
       </View>
       {status === 'sold' ? (
         <View className="flex-row gap-3">

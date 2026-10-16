@@ -6,6 +6,7 @@ import Fastify from 'fastify';
 import { config } from './config.js';
 import { pool } from './db.js';
 import authRoutes from './routes/auth.js';
+import bundleRoutes from './routes/bundles.js';
 import itemRoutes from './routes/items.js';
 import photoRoutes from './routes/photos.js';
 
@@ -35,6 +36,7 @@ export async function buildApp() {
 
   await app.register(authRoutes);
   await app.register(itemRoutes);
+  await app.register(bundleRoutes);
   await app.register(photoRoutes);
 
   return app;
