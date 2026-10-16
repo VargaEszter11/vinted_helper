@@ -20,7 +20,7 @@ export function useWideLayout(): boolean {
   return useWindowDimensions().width >= 640;
 }
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger-ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-ghost';
 
 const BUTTON_VARIANTS: Record<ButtonVariant, { box: string; text: string; tint: string }> = {
   primary: { box: 'bg-teal-700 active:bg-teal-800', text: 'text-white', tint: '#ffffff' },
@@ -30,6 +30,7 @@ const BUTTON_VARIANTS: Record<ButtonVariant, { box: string; text: string; tint: 
     tint: BRAND_COLOR,
   },
   ghost: { box: 'active:bg-slate-100', text: 'text-teal-700', tint: BRAND_COLOR },
+  danger: { box: 'bg-red-600 active:bg-red-700', text: 'text-white', tint: '#ffffff' },
   'danger-ghost': { box: 'active:bg-red-50', text: 'text-red-600', tint: '#dc2626' },
 };
 

@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Text, View } from 'react-native';
 
+import { ConfirmHost } from '@/components/confirm-host';
 import { CenteredSpinner } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { isApiConfigured } from '@/lib/api';
@@ -14,6 +15,7 @@ export default function RootLayout() {
     <AuthProvider>
       <StatusBar style="dark" />
       <RootNavigator />
+      <ConfirmHost />
     </AuthProvider>
   );
 }
