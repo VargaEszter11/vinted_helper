@@ -21,6 +21,10 @@ export const config = {
   port: Number(env.PORT ?? 3000),
   corsOrigin: env.CORS_ORIGIN ?? '*',
   allowRegistration: (env.ALLOW_REGISTRATION ?? 'true') === 'true',
+  // The one account that may use the admin panel. It cannot be registered through the API:
+  // it is created from ADMIN_PASSWORD when the server starts, or arrives with an import.
+  adminUsername: (env.ADMIN_USERNAME ?? 'admin').trim().toLowerCase(),
+  adminPassword: env.ADMIN_PASSWORD ?? '',
 };
 
 export const STATUSES = ['in_stock', 'listed', 'sold'];

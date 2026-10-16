@@ -27,6 +27,10 @@ export default async function authRoutes(app) {
         .send({ message: 'Username may only contain letters, numbers and . _ - @ +' });
     }
 
+    if (username === config.adminUsername) {
+      return reply.code(409).send({ message: 'That username is taken.' });
+    }
+
     try {
       const { rows } = await pool.query(
         'insert into users (username, password_hash) values ($1, $2) returning id',
@@ -49,5 +53,11 @@ export default async function authRoutes(app) {
       return reply.code(401).send({ message: 'Wrong username or password.' });
     }
     return { token: app.jwt.sign({ sub: user.id }) };
+  });
+
+  app.get('/auth/me', { onRequest: [app.authenticate] }, async (req, reply) => {
+    const { rows } = await pool.query('select username from users where id = $1', [req.user.sub]);
+    if (!rows[0]) return reply.code(401).send({ message: 'Please sign in again.' });
+    return { username: rows[0].username, isAdmin: rows[0].username === config.adminUsername };
   });
 }

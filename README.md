@@ -15,7 +15,7 @@ docker-compose.yml    Runs the API and Postgres together
 You need [Docker](https://docs.docker.com/get-docker/).
 
 ```sh
-cp .env.example .env     # then set DB_PASSWORD and JWT_SECRET
+cp .env.example .env     # then set DB_PASSWORD, JWT_SECRET and ADMIN_PASSWORD
 docker compose up -d --build
 ```
 
@@ -52,6 +52,15 @@ docker compose up -d
 ```
 
 Backup files contain your data and password hashes. Files named like the ones above (`backup-*.sql`, `photos-*.tar.gz`) are git-ignored so they can't be committed by accident; keep copies somewhere safe off the machine.
+
+## Admin panel: moving your data to another server
+
+The account named `ADMIN_USERNAME` (default `admin`) gets an **Admin** tab; nobody else sees it, and the server refuses its requests from anyone else. That name cannot be registered through the app: the account is created on start from `ADMIN_PASSWORD` if it does not exist yet (an existing admin is never changed), or it arrives with an import.
+
+- **Export** downloads one `.ndjson` file with everything: accounts (password hashes included), items, bundles, status history and photos.
+- **Import** (web only) replaces everything on the server with the contents of an export file. It is all or nothing: a damaged, cut-off or foreign file is rejected and nothing changes. Because accounts come from the file, you are signed out afterwards and sign in with the imported accounts' passwords, including the `admin` password from the exported server. The file must contain the admin account.
+
+To move from your computer to the hosted server: export on the local app, open the hosted app, sign in as its admin (the `ADMIN_PASSWORD` from the server's `.env`), and import the file. Take a [backup](#backups) of the hosted data first if it holds anything you want to keep. Export files contain password hashes, so treat them like backups and don't commit them (`*.ndjson` is git-ignored).
 
 ## Managing the database with pgAdmin
 

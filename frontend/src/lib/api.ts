@@ -34,17 +34,30 @@ export class ApiError extends Error {
 
 export async function api<T = unknown>(
   path: string,
-  options: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: unknown } = {},
+  options: {
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    body?: unknown;
+    /** A body sent as is (for example a file), instead of JSON. */
+    raw?: { body: BodyInit; contentType: string };
+  } = {},
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {
       method: options.method ?? 'GET',
       headers: {
-        ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.raw
+          ? { 'Content-Type': options.raw.contentType }
+          : options.body !== undefined
+            ? { 'Content-Type': 'application/json' }
+            : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: options.raw
+        ? options.raw.body
+        : options.body !== undefined
+          ? JSON.stringify(options.body)
+          : undefined,
     });
   } catch {
     throw new Error('Could not reach the server. Check your connection.');

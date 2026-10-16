@@ -4,8 +4,10 @@ import { Pressable, Text } from 'react-native';
 
 import { BRAND_COLOR } from '@/components/ui';
 import { setToken } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 
 export default function TabLayout() {
+  const { isAdmin } = useAuth();
   return (
     <Tabs
       screenOptions={{
@@ -26,6 +28,17 @@ export default function TabLayout() {
         options={{
           title: 'Sold',
           tabBarIcon: ({ color, size }) => <Ionicons name="cash-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Admin',
+          // No tab for anyone but the admin account.
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="shield-checkmark-outline" color={color} size={size} />
+          ),
         }}
       />
     </Tabs>

@@ -5,6 +5,7 @@ import Fastify from 'fastify';
 
 import { config } from './config.js';
 import { pool } from './db.js';
+import adminRoutes from './routes/admin.js';
 import authRoutes from './routes/auth.js';
 import bundleRoutes from './routes/bundles.js';
 import itemRoutes from './routes/items.js';
@@ -29,12 +30,27 @@ export async function buildApp() {
     }
   });
 
+  // Like authenticate, but also requires the signed-in user to be the admin account.
+  app.decorate('requireAdmin', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.code(401).send({ message: 'Please sign in again.' });
+    }
+    const { rows } = await pool.query('select username from users where id = $1', [request.user.sub]);
+    if (!rows[0]) return reply.code(401).send({ message: 'Please sign in again.' });
+    if (rows[0].username !== config.adminUsername) {
+      return reply.code(403).send({ message: 'Admins only.' });
+    }
+  });
+
   app.get('/health', async () => {
     await pool.query('select 1');
     return { ok: true };
   });
 
   await app.register(authRoutes);
+  await app.register(adminRoutes);
   await app.register(itemRoutes);
   await app.register(bundleRoutes);
   await app.register(photoRoutes);

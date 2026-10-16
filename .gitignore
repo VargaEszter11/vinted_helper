@@ -17,6 +17,7 @@ uploads/
 photos/
 *.dump
 *.sql.gz
+*.ndjson
 backup-*.sql
 photos-*.tar.gz
 
