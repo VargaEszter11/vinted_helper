@@ -8,6 +8,7 @@ import { pool } from './db.js';
 import adminRoutes from './routes/admin.js';
 import authRoutes from './routes/auth.js';
 import bundleRoutes from './routes/bundles.js';
+import buyCheckRoutes from './routes/buy-check.js';
 import itemRoutes from './routes/items.js';
 import photoRoutes from './routes/photos.js';
 
@@ -53,6 +54,7 @@ export async function buildApp() {
   await app.register(adminRoutes);
   await app.register(itemRoutes);
   await app.register(bundleRoutes);
+  await app.register(buyCheckRoutes);
   await app.register(photoRoutes);
 
   return app;

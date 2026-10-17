@@ -31,6 +31,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="buy-check"
+        options={{
+          title: 'Buy check',
+          tabBarIcon: ({ color, size }) => <Ionicons name="scan-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="admin"
         options={{
           title: 'Admin',

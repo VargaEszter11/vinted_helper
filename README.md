@@ -103,6 +103,14 @@ Copy the repo to any server with Docker, create `.env`, and run `docker compose 
 
 For a native app build, set `EXPO_PUBLIC_API_URL` to the public address of the API (e.g. `https://vinted.example.com/api`).
 
+## Buy check
+
+The **Buy check** tab identifies an item from up to 3 photos while you are in a shop. It is separate from the Items and Sold tabs and saves nothing: the last result lives in the app until you tap **Clear / new check**.
+
+Add photos and the price you would pay, optionally fill in what you already know (brand, colour, condition, size), and tap **Check item**. The result shows brand, item type, category, size, colour, material, condition, a suggested name, a search phrase and a confidence level, all editable. Details you typed are kept as yours; the AI only fills in the empty ones.
+
+It needs a DeepSeek API key (https://platform.deepseek.com) in `.env` as `DEEPSEEK_API_KEY`; then run `docker compose up -d --force-recreate backend`. The key stays on the server. Each user can make 30 checks per hour (failed checks do not count). The provider, model and prompt are constants at the top of [`backend/src/lib/item-recognition.js`](backend/src/lib/item-recognition.js). The server logs the token usage of every check.
+
 ## How it works
 
 - **Items** tab: unsold items (in stock or listed) with a filter, an **Add item** button and a **Mark as sold** action per row. Tap a row to edit it. Each row shows the date its status last changed.

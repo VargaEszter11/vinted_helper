@@ -8,7 +8,7 @@ import { errorMessage } from '@/lib/format';
 import { pickPhotos } from '@/lib/photos';
 import type { ItemPhoto, LocalPhoto } from '@/lib/types';
 
-const TILE_SIZE = 84;
+export const TILE_SIZE = 84;
 
 export function PhotoPicker({
   existing,
@@ -102,7 +102,7 @@ export function PhotoPicker({
   );
 }
 
-function PhotoTile({
+export function PhotoTile({
   uri,
   onRemove,
   disabled,

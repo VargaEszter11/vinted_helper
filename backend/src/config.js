@@ -25,6 +25,8 @@ export const config = {
   // it is created from ADMIN_PASSWORD when the server starts, or arrives with an import.
   adminUsername: (env.ADMIN_USERNAME ?? 'admin').trim().toLowerCase(),
   adminPassword: env.ADMIN_PASSWORD ?? '',
+  // Key for the image recognition provider (Buy check). Never sent to the app.
+  deepseekApiKey: env.DEEPSEEK_API_KEY ?? '',
 };
 
 export const STATUSES = ['in_stock', 'listed', 'sold'];

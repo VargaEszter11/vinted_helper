@@ -103,3 +103,13 @@ insert into item_status_history (item_id, status, changed_at)
 select i.id, i.status, i.status_changed_at
 from items i
 where not exists (select 1 from item_status_history h where h.item_id = i.id);
+
+-- One row per "Buy check" request, only to rate-limit how many a user can make per hour.
+-- The checks themselves are not stored. Old rows are pruned by the endpoint.
+create table if not exists buy_checks (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists buy_checks_user_created_idx on buy_checks (user_id, created_at);
