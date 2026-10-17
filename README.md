@@ -111,6 +111,14 @@ Add photos and the price you would pay, optionally fill in what you already know
 
 It needs a DeepSeek API key (https://platform.deepseek.com) in `.env` as `DEEPSEEK_API_KEY`; then run `docker compose up -d --force-recreate backend`. The key stays on the server. Each user can make 30 checks per hour (failed checks do not count). The provider, model and prompt are constants at the top of [`backend/src/lib/item-recognition.js`](backend/src/lib/item-recognition.js). The server logs the token usage of every check.
 
+### Prices and the buy/skip verdict
+
+Right after an item is identified, the app looks up prices by itself (no extra tap); **Search again** repeats it after you correct a detail. It searches the web through DeepSeek's Search API with two plain searches (one for the price, one for used items for sale), not limited to any site. A model then reads only those search results, sorts them into new-price shops and second-hand listings (Vinted, Jófogás, eBay and so on, whatever turns up) and picks out prices; the code checks that every link comes from the results and every price appears in the result's own text. The second-hand figures are **asking prices, not sold prices**. Nothing is requested from Vinted or any other site directly.
+
+Your own sold items (matched by guessing a category from the item name) and the web results give a **BUY / MAYBE / SKIP** verdict, computed in code. All thresholds are in one object, `VERDICT_CONFIG` in [`backend/src/lib/verdict.js`](backend/src/lib/verdict.js). The resale estimate is your own sales median (with 3 or more similar sales), else the second-hand asking median minus 10%, else half the new price. Fewer than 3 data points, or only a new price, shows **LOW CONFIDENCE**. You can type a typical resale price to recalculate on the spot.
+
+Web results are cached for 24 hours per search phrase, each user gets 20 real lookups per hour (cache hits are free), and only one lookup runs per user at a time. To try a list of items from the terminal: `APP_USER=you APP_PASSWORD=... node backend/scripts/try-prices.mjs items.txt` (format at the top of that file).
+
 ## How it works
 
 - **Items** tab: unsold items (in stock or listed) with a filter, an **Add item** button and a **Mark as sold** action per row. Tap a row to edit it. Each row shows the date its status last changed.

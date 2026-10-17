@@ -113,3 +113,20 @@ create table if not exists buy_checks (
 );
 
 create index if not exists buy_checks_user_created_idx on buy_checks (user_id, created_at);
+
+-- Buy check price lookups. Web results are public search data shared between users and kept
+-- for 24 hours so the same item is not searched twice a day. The endpoint prunes old rows.
+create table if not exists price_cache (
+  key text primary key,
+  data jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+-- One row per price lookup that really called the search provider, to rate-limit per user.
+create table if not exists price_checks (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists price_checks_user_created_idx on price_checks (user_id, created_at);

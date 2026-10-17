@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { NO_PRICES, PricesSection, type PricesState } from '@/components/buy-check-prices';
 import { PhotoTile, TILE_SIZE } from '@/components/photo-picker';
 import { BRAND_COLOR, Button, ErrorBanner, Field, PriceField } from '@/components/ui';
 import {
@@ -10,9 +11,11 @@ import {
   CONDITION_OPTIONS,
   MAX_BUY_CHECK_PHOTOS,
   RESULT_FIELDS,
+  findPrices,
   identifyItem,
   type BuyCheckResult,
   type ConditionValue,
+  type PricesInput,
   type ResultField,
 } from '@/lib/buy-check';
 import { errorMessage, formatHuf, parsePrice } from '@/lib/format';
@@ -39,6 +42,19 @@ type Edits = Record<ResultField, string>;
 const toEdits = (result: BuyCheckResult): Edits =>
   Object.fromEntries(RESULT_FIELDS.map((key) => [key, result.fields[key] ?? ''])) as Edits;
 
+type PricesItem = Omit<PricesInput, 'price'>;
+
+/** The details the price lookup needs, taken from the (possibly corrected) result. */
+const pricesItem = (edits: Edits): PricesItem => ({
+  search_phrase: edits.search_phrase,
+  brand: edits.brand,
+  item_type: edits.item_type,
+  category: edits.category,
+  size: edits.size,
+  colour: edits.colour,
+  condition: edits.condition,
+});
+
 export default function BuyCheckScreen() {
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [picking, setPicking] = useState(false);
@@ -51,9 +67,14 @@ export default function BuyCheckScreen() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BuyCheckResult | null>(null);
   const [edits, setEdits] = useState<Edits | null>(null);
+  // Changes with every identification, so an old price lookup never stays under a new result.
+  const [checkId, setCheckId] = useState(0);
+  const [prices, setPrices] = useState<PricesState>(NO_PRICES);
+  const priceRun = useRef(0);
 
   const price = parsePrice(priceText);
-  const busy = checking || picking;
+  // A new check waits for a running price lookup: the server runs one lookup at a time per user.
+  const busy = checking || picking || prices.loading;
   const canCheck = photos.length > 0 && price.value !== null && !price.error && !busy;
 
   async function addPhotos(source: 'library' | 'camera') {
@@ -72,14 +93,30 @@ export default function BuyCheckScreen() {
     }
   }
 
+  /** Looks up prices for the given details. Only the newest lookup's answer is kept. */
+  async function lookupPrices(item: PricesItem, forPrice: number) {
+    const run = ++priceRun.current;
+    setPrices({ loading: true, error: null, data: null });
+    try {
+      const data = await findPrices({ ...item, price: forPrice });
+      if (run === priceRun.current) setPrices({ loading: false, error: null, data });
+    } catch (e) {
+      if (run === priceRun.current) setPrices({ loading: false, error: errorMessage(e), data: null });
+    }
+  }
+
   async function check() {
     if (price.value === null) return;
     setError(null);
     setChecking(true);
     try {
       const next = await identifyItem({ photos, price: price.value, brand, colour, size, condition });
+      const nextEdits = toEdits(next);
       setResult(next);
-      setEdits(toEdits(next));
+      setEdits(nextEdits);
+      setCheckId((current) => current + 1);
+      // Prices are looked up right away, without another tap. Not awaited: the item card shows now.
+      void lookupPrices(pricesItem(nextEdits), next.price);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -88,6 +125,8 @@ export default function BuyCheckScreen() {
   }
 
   function clear() {
+    priceRun.current += 1;
+    setPrices(NO_PRICES);
     setPhotos([]);
     setPriceText('');
     setBrand('');
@@ -215,6 +254,15 @@ export default function BuyCheckScreen() {
             result={result}
             edits={edits}
             onEdit={(key, value) => setEdits({ ...edits, [key]: value })}
+          />
+        ) : null}
+
+        {result && edits && !checking ? (
+          <PricesSection
+            key={checkId}
+            item={pricesItem(edits)}
+            state={prices}
+            onFind={() => lookupPrices(pricesItem(edits), result.price)}
           />
         ) : null}
       </View>

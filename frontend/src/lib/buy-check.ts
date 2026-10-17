@@ -80,3 +80,90 @@ export function identifyItem(input: BuyCheckInput): Promise<BuyCheckResult> {
     },
   });
 }
+
+// --- Price lookup and verdict ------------------------------------------------------------
+
+export type Verdict = 'BUY' | 'MAYBE' | 'SKIP';
+
+/** The verdict thresholds, sent by the server so the app always uses the same values. */
+export type VerdictThresholds = {
+  buyMarginPercent: number;
+  buyMinMarginHuf: number;
+  askingPriceHaircut: number;
+  newPriceHaircut: number;
+  minOwnSales: number;
+  minDataPoints: number;
+};
+
+export type PriceSource = {
+  title: string;
+  url: string;
+  price: number;
+  original: { amount: number; currency: string } | null;
+};
+
+export type UsedListing = {
+  title: string;
+  url: string;
+  /** The site the listing is on, for example vinted.hu. */
+  site: string;
+  price: number | null;
+  size: string | null;
+  condition: string | null;
+  reason: string | null;
+};
+
+export type PricesResult = {
+  price: number;
+  web: {
+    available: boolean;
+    message?: string;
+    new_price: { min: number; median: number; max: number; currency: 'HUF'; sources: PriceSource[] } | null;
+    used: { listings: UsedListing[]; dropped: UsedListing[] };
+    note: string | null;
+    rates_note: string | null;
+  };
+  cache: { hit: boolean; fetched_at: string } | null;
+  own_sales: {
+    count: number;
+    match: 'brand_category' | 'category' | null;
+    median_sold_for: number | null;
+    median_days_to_sell: number | null;
+    days_samples: number;
+  };
+  verdict: {
+    verdict: Verdict | 'LOW_CONFIDENCE';
+    leaning: Verdict | null;
+    estimate: { source: 'own_sales' | 'used_asking' | 'new_price'; value: number; data_points: number } | null;
+    margin: number | null;
+    margin_percent: number | null;
+    explanation: string;
+  };
+  thresholds: VerdictThresholds;
+};
+
+export type PricesInput = {
+  price: number;
+  search_phrase: string;
+  brand: string;
+  item_type: string;
+  category: string;
+  size: string;
+  colour: string;
+  condition: string;
+};
+
+/** Looks up prices for the (corrected) item. Nothing is saved. */
+export function findPrices(input: PricesInput): Promise<PricesResult> {
+  return api<PricesResult>('/buy-check/prices', { method: 'POST', body: input });
+}
+
+/** The same rule the server uses: margin = resale value minus the price you pay. */
+export function classifyMargin(margin: number, price: number, thresholds: VerdictThresholds): Verdict {
+  if (margin >= (price * thresholds.buyMarginPercent) / 100 && margin >= thresholds.buyMinMarginHuf) return 'BUY';
+  if (margin > 0) return 'MAYBE';
+  return 'SKIP';
+}
+
+export const vintedSearchUrl = (phrase: string) =>
+  `https://www.vinted.hu/catalog?search_text=${encodeURIComponent(phrase.trim())}`;
