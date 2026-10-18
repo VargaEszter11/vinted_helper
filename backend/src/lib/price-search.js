@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { mentionsBrand } from './brand.js';
 import { median } from './stats.js';
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,9 @@ const MAX_OUTPUT_TOKENS = 1500;
 const MAX_RESULT_TEXT = 450;
 
 /** Search queries. {phrase} is the item's search phrase. Hungarian: "ár" = price, "használt eladó" = used, for sale. */
+/** Bump when the searches change, so results cached by an older version are not reused. */
+export const SEARCH_VERSION = 2;
+
 const PRICE_QUERY = '{phrase} ár Ft';
 const USED_QUERY = '{phrase} használt eladó';
 /** Hosts that sell second-hand or private ads: never a source of new prices. */
@@ -41,6 +45,7 @@ Reply with ONLY one JSON object, no other text and no markdown:
 }
 
 Rules:
+- If the item has a brand, use ONLY results about that exact brand. Skip results about any other brand, even for a very similar item. For a second-hand listing of another brand, set "same_item" to false and "reason" to "different brand".
 - "id" is the number of a search result. Never write links.
 - "price" is a number exactly as written in that result's text, in the currency shown there ("HUF" for Ft or forint, "EUR", "USD", ...). Never invent, estimate or adjust a price, and never take it from a result that does not state it.
 - "new_price_sources": results from online shops that sell this item, or the closest equivalent, NEW, with its current price. One entry per shop. Skip second-hand sites and marketplaces, news, blogs and results without a clear price.
@@ -60,9 +65,33 @@ export class LookupUnavailableError extends Error {
   }
 }
 
-/** Fills a query template. Characters that act as search operators are removed from the phrase. */
-const fill = (template, phrase) =>
-  template.replace('{phrase}', phrase.replace(/["':()]/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 128);
+/**
+ * Characters that act as search operators (quotes, colons, brackets, a leading minus) are
+ * removed from text put into a query. Apostrophes stay: they are part of names like Levi's.
+ */
+const plain = (text) =>
+  text
+    .replace(/["():]/g, ' ')
+    .replace(/(^|\s)-+/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * The phrase for a query. With a brand, the brand goes first in quotes (an exact-phrase search),
+ * so the search engine keeps to that brand: `"Zara" black wool coat`. A brand with punctuation
+ * (Levi's, H&M) stays unquoted, because an exact phrase would not match every spelling.
+ */
+function queryPhrase(item) {
+  const phrase = plain(item.search_phrase);
+  const brand = item.brand ? plain(item.brand) : '';
+  if (!brand || !/^[\p{L}\p{N} ]+$/u.test(item.brand)) return phrase;
+  // The brand holds only letters, digits and spaces here, so it is safe inside a RegExp.
+  const rest = phrase.replace(new RegExp(brand, 'ig'), ' ').replace(/\s+/g, ' ').trim();
+  return `"${brand}" ${rest}`.trim();
+}
+
+/** Fills a query template. */
+const fill = (template, item) => template.replace('{phrase}', queryPhrase(item)).slice(0, 128);
 
 async function callSearch(query) {
   let response;
@@ -220,9 +249,11 @@ function toHuf(price, currency) {
  * Turns the model's reply into the final result, keeping only what the search results
  * back up. Anything rejected goes to `dropped` with the reason.
  */
-function assemble(reply, results) {
+function assemble(reply, results, item) {
   const byId = new Map(results.map((result) => [result.id, result]));
-  const textOf = (result) => `${result.title} ${result.text}`;
+  // The link is included too: shop domains and listing addresses often carry the brand name.
+  const textOf = (result) => `${result.title} ${result.text} ${result.url}`;
+  const wrongBrand = (result) => Boolean(item.brand) && !mentionsBrand(textOf(result), item.brand);
   let converted = false;
 
   const sources = [];
@@ -232,6 +263,8 @@ function assemble(reply, results) {
     const result = byId.get(entry?.id);
     const price = toHuf(entry?.price, entry?.currency);
     if (!result || !price || !priceAppearsIn(textOf(result), entry.price)) continue;
+    // Only the item's own brand: a result that does not name it is not used.
+    if (wrongBrand(result)) continue;
     if (NOT_NEW_PRICE_HOSTS.some((host) => result.host.includes(host))) continue;
     if (seenShops.has(result.host)) continue;
     seenShops.add(result.host);
@@ -260,7 +293,9 @@ function assemble(reply, results) {
       size: cleanText(entry?.size, 30),
       condition: cleanText(entry?.condition),
     };
-    if (!price || !priceAppearsIn(textOf(result), entry.price)) {
+    if (wrongBrand(result)) {
+      dropped.push({ ...base, price: price?.huf ?? null, reason: `The listing does not mention the brand ${item.brand}.` });
+    } else if (!price || !priceAppearsIn(textOf(result), entry.price)) {
       dropped.push({ ...base, price: null, reason: 'The price could not be confirmed in the search result.' });
     } else if (entry.same_item !== true) {
       dropped.push({ ...base, price: price.huf, reason: cleanText(entry?.reason, 140) ?? 'Not the same kind of item.' });
@@ -285,6 +320,7 @@ function assemble(reply, results) {
     used: { listings, dropped },
     note: cleanText(reply.note, 200),
     rates_note: converted ? RATES_NOTE : null,
+    search_version: SEARCH_VERSION,
   };
 }
 
@@ -298,8 +334,8 @@ export async function searchPrices(item) {
   }
 
   const searches = await Promise.allSettled([
-    callSearch(fill(PRICE_QUERY, item.search_phrase)),
-    callSearch(fill(USED_QUERY, item.search_phrase)),
+    callSearch(fill(PRICE_QUERY, item)),
+    callSearch(fill(USED_QUERY, item)),
   ]);
   const failures = searches.filter((search) => search.status === 'rejected');
   if (failures.length === searches.length) throw failures[0].reason;
@@ -315,6 +351,7 @@ export async function searchPrices(item) {
         used: { listings: [], dropped: [] },
         note: partialNote ?? 'The search found nothing for this item.',
         rates_note: null,
+        search_version: SEARCH_VERSION,
       },
       usage,
       searches: searches.length - failures.length,
@@ -341,7 +378,7 @@ export async function searchPrices(item) {
   }
   if (!parsed) throw new LookupUnavailableError('Could not read the price lookup result. Try again.');
 
-  const web = assemble(parsed, results);
+  const web = assemble(parsed, results, item);
   if (partialNote) web.note = [web.note, partialNote].filter(Boolean).join(' ');
   return { web, usage, searches: searches.length - failures.length };
 }

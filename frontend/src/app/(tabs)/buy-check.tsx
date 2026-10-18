@@ -98,7 +98,9 @@ export default function BuyCheckScreen() {
     const run = ++priceRun.current;
     setPrices({ loading: true, error: null, data: null });
     try {
-      const data = await findPrices({ ...item, price: forPrice });
+      // The first two photos are sent too, so the listings can be compared with the item itself.
+      const images = photos.slice(0, 2).map((photo) => photo.base64);
+      const data = await findPrices({ ...item, price: forPrice, images });
       if (run === priceRun.current) setPrices({ loading: false, error: null, data });
     } catch (e) {
       if (run === priceRun.current) setPrices({ loading: false, error: errorMessage(e), data: null });

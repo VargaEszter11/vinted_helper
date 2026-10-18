@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState, type ReactNode } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
+import { Thumbnail } from '@/components/thumbnail';
 import { Button, ErrorBanner, PriceField } from '@/components/ui';
 import {
   classifyMargin,
@@ -62,8 +63,9 @@ export function PricesSection({
       <Text className="text-base font-semibold text-slate-900">Prices</Text>
       <Text className="text-sm text-slate-600">
         Looked up automatically for the details above: the web is searched for the new price and for
-        second-hand listings (Vinted, Jófogás, eBay and others, whatever the search finds). If you
-        correct a detail, search again.
+        second-hand listings (Vinted, Jófogás, eBay and others, whatever the search finds). The
+        photos of the listings are compared with yours. When the item has a brand, only that brand
+        is searched. If you correct a detail, search again.
       </Text>
 
       <View className="flex-row flex-wrap gap-2">
@@ -183,6 +185,13 @@ function PricesResultView({
             ) : null}
           </Block>
 
+          {data.visual.compared > 0 ? (
+            <Text className="text-xs text-slate-500">
+              Listing photos compared with yours: {data.visual.compared}
+              {data.visual.dropped > 0 ? `, ${data.visual.dropped} removed as a different item` : ''}.
+            </Text>
+          ) : null}
+          {data.visual.note ? <Text className="text-xs text-slate-500">{data.visual.note}</Text> : null}
           {web.rates_note ? <Text className="text-xs text-slate-500">{web.rates_note}</Text> : null}
           {web.note ? <Text className="text-xs text-slate-500">{web.note}</Text> : null}
         </>
@@ -278,6 +287,8 @@ function ListingRow({ listing, muted = false }: { listing: UsedListing; muted?: 
       right={listing.price !== null ? formatHuf(listing.price) : '—'}
       detail={[details, muted ? listing.reason : null].filter(Boolean).join(' — ') || null}
       muted={muted}
+      image={listing.image_url}
+      badge={listing.visual?.match === 'same' ? 'Looks the same' : listing.visual?.match === 'similar' ? 'Looks similar' : null}
     />
   );
 }
@@ -289,23 +300,33 @@ function LinkRow({
   right,
   detail,
   muted = false,
+  image,
+  badge = null,
 }: {
   title: string;
   url: string;
   right: string;
   detail: string | null;
   muted?: boolean;
+  image?: string | null;
+  badge?: string | null;
 }) {
   return (
     <Pressable
       onPress={() => openLink(url)}
       accessibilityRole="link"
       className="flex-row items-start gap-3 rounded-lg border border-slate-200 px-3 py-2 active:bg-slate-50">
+      {image ? <Thumbnail uri={image} size={48} /> : null}
       <View className="flex-1 gap-0.5">
         <Text numberOfLines={2} className={`text-sm font-medium ${muted ? 'text-slate-500' : 'text-teal-700'}`}>
           {title}
         </Text>
         {detail ? <Text className="text-xs text-slate-500">{detail}</Text> : null}
+        {badge ? (
+          <View className="self-start rounded-full bg-emerald-100 px-2 py-0.5">
+            <Text className="text-xs font-medium text-emerald-800">{badge}</Text>
+          </View>
+        ) : null}
       </View>
       <Text className={`text-sm font-semibold ${muted ? 'text-slate-500' : 'text-slate-900'}`}>{right}</Text>
     </Pressable>

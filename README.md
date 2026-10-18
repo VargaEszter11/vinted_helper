@@ -117,7 +117,11 @@ Right after an item is identified, the app looks up prices by itself (no extra t
 
 Your own sold items (matched by guessing a category from the item name) and the web results give a **BUY / MAYBE / SKIP** verdict, computed in code. All thresholds are in one object, `VERDICT_CONFIG` in [`backend/src/lib/verdict.js`](backend/src/lib/verdict.js). The resale estimate is your own sales median (with 3 or more similar sales), else the second-hand asking median minus 10%, else half the new price. Fewer than 3 data points, or only a new price, shows **LOW CONFIDENCE**. You can type a typical resale price to recalculate on the spot.
 
-Web results are cached for 24 hours per search phrase, each user gets 20 real lookups per hour (cache hits are free), and only one lookup runs per user at a time. To try a list of items from the terminal: `APP_USER=you APP_PASSWORD=... node backend/scripts/try-prices.mjs items.txt` (format at the top of that file).
+**Only the item's brand:** when the item has a brand, the searches are for that brand only (it is added to the search phrase and put in quotes), the model is told to skip other brands, and the code drops any result whose title, text or link does not name the brand (those listings appear under "not used"). Without a brand nothing is filtered by brand. A brand's spelling variants (Levi's / Levis, H&M) count as the same.
+
+**Photo comparison:** the search results are text only, so for up to 6 of the kept second-hand listings (Vinted ones first) the app reads the listing page through DeepSeek's Fetch API to find its photo (DeepSeek loads the page, not this server), and the vision model compares it with your first two photos. Listings that clearly show a different item move to "not used"; the others get a thumbnail and a "Looks the same" / "Looks similar" badge. If a page can't be read or the comparison fails, the listing simply keeps its text-only result. The constants are at the top of [`backend/src/lib/visual-match.js`](backend/src/lib/visual-match.js).
+
+Web results are cached for 24 hours per search phrase (listing photo addresses too; the photo comparison itself depends on your photos, so it runs every time). Each user gets 20 real lookups per hour (a cache hit is free, unless you send photos, which uses one lookup for the comparison), and only one lookup runs per user at a time. To try a list of items from the terminal: `APP_USER=you APP_PASSWORD=... node backend/scripts/try-prices.mjs items.txt` (format at the top of that file).
 
 ## How it works
 

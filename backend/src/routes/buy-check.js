@@ -1,9 +1,9 @@
 import { pool } from '../db.js';
+import { MAX_IMAGE_BYTES, isJpeg } from '../lib/images.js';
 import { CONDITIONS, identifyItem, RecognitionError } from '../lib/item-recognition.js';
 import { price } from './schemas.js';
 
 const MAX_IMAGES = 3;
-const MAX_IMAGE_BYTES = 1_500_000;
 const CHECKS_PER_HOUR = 30;
 
 const optionalText = { type: ['string', 'null'], maxLength: 60 };
@@ -29,15 +29,6 @@ const identifySchema = {
     },
   },
 };
-
-const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
-
-/** True when the string is base64 of a JPEG that is small enough. */
-function isJpeg(data) {
-  if (!BASE64.test(data)) return false;
-  const bytes = Buffer.from(data, 'base64');
-  return bytes.length <= MAX_IMAGE_BYTES && bytes[0] === 0xff && bytes[1] === 0xd8;
-}
 
 const clean = (value) => (typeof value === 'string' && value.trim() !== '' ? value.trim() : null);
 

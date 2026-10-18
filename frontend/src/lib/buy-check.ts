@@ -107,6 +107,10 @@ export type UsedListing = {
   url: string;
   /** The site the listing is on, for example vinted.hu. */
   site: string;
+  /** The listing's own photo, when it could be read. */
+  image_url?: string | null;
+  /** How the listing's photo compares with yours, when it was compared. */
+  visual?: { match: 'same' | 'similar' | 'unclear'; reason: string | null };
   price: number | null;
   size: string | null;
   condition: string | null;
@@ -123,6 +127,8 @@ export type PricesResult = {
     note: string | null;
     rates_note: string | null;
   };
+  /** The photo comparison of the second-hand listings with your photos. */
+  visual: { used: boolean; compared: number; dropped: number; note: string | null };
   cache: { hit: boolean; fetched_at: string } | null;
   own_sales: {
     count: number;
@@ -151,6 +157,8 @@ export type PricesInput = {
   size: string;
   colour: string;
   condition: string;
+  /** Base64 JPEGs of the item (at most 2), so listings can be compared with its photos. */
+  images?: string[];
 };
 
 /** Looks up prices for the (corrected) item. Nothing is saved. */
