@@ -2,7 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -134,6 +136,51 @@ export function PriceField(props: Omit<ComponentProps<typeof Field>, 'keyboardTy
   return <Field keyboardType="decimal-pad" inputMode="decimal" placeholder="0" {...props} />;
 }
 
+export function SearchField({
+  value,
+  onChangeText,
+  placeholder = 'Search by name, brand, or size',
+}: {
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View
+      className="w-full flex-row items-center gap-2 rounded-lg border bg-white px-3"
+      // Border color stays in `style`: swapping it through classes remounts the field on native.
+      style={focusFrame(focused)}>
+      <Ionicons name="search-outline" size={18} color={focused ? BRAND_COLOR : '#94a3b8'} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#94a3b8"
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="search"
+        selectionColor={BRAND_COLOR}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        accessibilityLabel="Search items"
+        // Inline, so it beats the browser's default blue focus ring.
+        style={NO_BROWSER_OUTLINE}
+        className="flex-1 py-2.5 text-base text-slate-900"
+      />
+      {value ? (
+        <Pressable
+          onPress={() => onChangeText('')}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+          hitSlop={8}>
+          <Ionicons name="close-circle" size={18} color="#94a3b8" />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 const SEGMENT_SELECTED_STYLE = {
   backgroundColor: '#ffffff',
   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
@@ -242,6 +289,106 @@ export function Chips<T extends string>({
         );
       })}
     </View>
+  );
+}
+
+/** A compact "Brand ▾" style button that opens a popup list of values to filter by. */
+export function FilterSelect<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T | null;
+  options: { value: T; label: string }[];
+  onChange: (value: T | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = options.find((option) => option.value === value)?.label;
+  const active = selectedLabel != null;
+
+  function choose(next: T | null) {
+    onChange(next);
+    setOpen(false);
+  }
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`Filter by ${label}`}
+        className={`flex-row items-center gap-1 rounded-lg border px-3 py-2 ${
+          active ? 'border-teal-700 bg-teal-50' : 'border-slate-300 bg-white active:bg-slate-100'
+        }`}>
+        <Text
+          numberOfLines={1}
+          className={`max-w-[120px] text-sm ${active ? 'font-semibold text-teal-800' : 'text-slate-700'}`}>
+          {selectedLabel ?? label}
+        </Text>
+        <Ionicons name="chevron-down" size={14} color={active ? BRAND_COLOR : '#64748b'} />
+      </Pressable>
+      <Modal transparent animationType="fade" visible={open} onRequestClose={() => setOpen(false)}>
+        <Pressable
+          className="flex-1 items-center justify-center bg-black/40 p-6"
+          onPress={() => setOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close">
+          {/* Stops the tap from reaching the backdrop above and closing the popup. */}
+          <Pressable className="max-h-[70%] w-full max-w-xs rounded-xl bg-white">
+            <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3">
+              <Text className="text-base font-semibold text-slate-900">{label}</Text>
+              <Pressable
+                onPress={() => setOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                className="rounded-full p-1 active:bg-slate-100">
+                <Ionicons name="close" size={20} color="#475569" />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerClassName="p-2">
+              <FilterOption label={`All (${label.toLowerCase()})`} selected={value === null} onPress={() => choose(null)} />
+              {options.map((option) => (
+                <FilterOption
+                  key={option.value}
+                  label={option.label}
+                  selected={option.value === value}
+                  onPress={() => choose(option.value)}
+                />
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+function FilterOption({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      className={`flex-row items-center justify-between rounded-lg px-3 py-2.5 ${
+        selected ? 'bg-teal-50' : 'active:bg-slate-100'
+      }`}>
+      <Text
+        numberOfLines={1}
+        className={`flex-1 text-sm ${selected ? 'font-semibold text-teal-800' : 'text-slate-700'}`}>
+        {label}
+      </Text>
+      {selected ? <Ionicons name="checkmark" size={18} color={BRAND_COLOR} /> : null}
+    </Pressable>
   );
 }
 

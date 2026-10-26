@@ -11,17 +11,21 @@ import {
   BRAND_COLOR,
   Button,
   CenteredSpinner,
+  CONDITION_OPTIONS,
   EmptyState,
   ErrorBanner,
   ErrorState,
+  FilterSelect,
   HeaderText,
   Money,
+  SearchField,
   Segmented,
   StatusBadge,
   useWideLayout,
 } from '@/components/ui';
 import { useItemList } from '@/hooks/use-item-list';
 import { formatItemCount } from '@/lib/format';
+import { filterOptions, itemMatchesFilters, itemMatchesQuery, NO_FILTERS, type ItemFilters } from '@/lib/items';
 import type { Item, ItemStatus } from '@/lib/types';
 
 const UNSOLD: ItemStatus[] = ['in_stock', 'listed'];
@@ -70,6 +74,8 @@ export default function ItemsScreen() {
     'created_at',
   );
   const [filter, setFilter] = useState<Filter>('all');
+  const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<ItemFilters>(NO_FILTERS);
   // undefined: closed, null: adding a new item
   const [editing, setEditing] = useState<Item | null | undefined>(undefined);
   const [selling, setSelling] = useState<Item | null>(null);
@@ -80,7 +86,18 @@ export default function ItemsScreen() {
   const [bundleSelling, setBundleSelling] = useState<BundleTarget | null>(null);
   const wide = useWideLayout();
 
-  const visibleItems = filter === 'all' ? items : items.filter((item) => item.status === filter);
+  const searching = query.trim().length > 0;
+  const filtering = filters.brand !== null || filters.size !== null || filters.condition !== null;
+  const statusItems = filter === 'all' ? items : items.filter((item) => item.status === filter);
+  const { brands, sizes } = filterOptions(statusItems);
+  const matches = (item: Item) => itemMatchesQuery(item, query) && itemMatchesFilters(item, filters);
+  // A bundle stays together when any of its items match, so the bundle price still makes sense.
+  const matchedBundleIds = new Set(
+    statusItems.filter((item) => item.bundle_id && matches(item)).map((item) => item.bundle_id),
+  );
+  const visibleItems = statusItems.filter(
+    (item) => matches(item) || (item.bundle_id != null && matchedBundleIds.has(item.bundle_id)),
+  );
   const rows = buildRows(visibleItems, items);
   const selecting = selected !== null;
 
@@ -215,7 +232,7 @@ export default function ItemsScreen() {
     <View className="flex-1 bg-slate-50">
       <View className="w-full max-w-5xl flex-1 self-center">
         {selecting ? (
-          <View className="flex-row flex-wrap items-center gap-3 px-3 py-3">
+          <View className="flex-row flex-wrap items-center gap-3 px-3 pt-3">
             <Text className="min-w-[160px] flex-1 text-sm text-slate-700">
               Tap the items you listed together.
             </Text>
@@ -230,7 +247,7 @@ export default function ItemsScreen() {
             </View>
           </View>
         ) : (
-          <View className="flex-row flex-wrap items-center gap-3 px-3 py-3">
+          <View className="flex-row flex-wrap items-center gap-3 px-3 pt-3">
             <View className="min-w-[220px] flex-1">
               <Segmented options={FILTERS} value={filter} onChange={setFilter} />
             </View>
@@ -246,6 +263,37 @@ export default function ItemsScreen() {
             </View>
           </View>
         )}
+
+        <View className="gap-2 px-3 py-3">
+          <SearchField value={query} onChangeText={setQuery} />
+          <View className="flex-row flex-wrap items-center gap-2">
+            {brands.length > 0 ? (
+              <FilterSelect
+                label="Brand"
+                options={brands.map((brand) => ({ value: brand, label: brand }))}
+                value={filters.brand}
+                onChange={(brand) => setFilters((current) => ({ ...current, brand }))}
+              />
+            ) : null}
+            {sizes.length > 0 ? (
+              <FilterSelect
+                label="Size"
+                options={sizes.map((size) => ({ value: size, label: size }))}
+                value={filters.size}
+                onChange={(size) => setFilters((current) => ({ ...current, size }))}
+              />
+            ) : null}
+            <FilterSelect
+              label="Condition"
+              options={CONDITION_OPTIONS}
+              value={filters.condition}
+              onChange={(condition) => setFilters((current) => ({ ...current, condition }))}
+            />
+            {filtering ? (
+              <Button title="Clear filters" variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
+            ) : null}
+          </View>
+        </View>
 
         {error && items.length > 0 ? (
           <View className="px-3 pb-3">
@@ -279,7 +327,11 @@ export default function ItemsScreen() {
                   Tap “Add item” to add the first thing you bought.
                 </EmptyState>
               ) : (
-                <EmptyState title="No items match this filter" />
+                <EmptyState
+                  title={
+                    searching || filtering ? 'No items match your search' : 'No items match this filter'
+                  }
+                />
               )
             }
             renderItem={({ item: row }) =>
@@ -291,7 +343,7 @@ export default function ItemsScreen() {
         {!loading && items.length > 0 ? (
           <View className={`border-t border-slate-200 bg-white py-3 ${rowClass}`}>
             <Text className="text-sm font-medium text-slate-700">
-              {filter === 'all'
+              {filter === 'all' && !searching && !filtering
                 ? formatItemCount(items.length)
                 : `${visibleItems.length} of ${formatItemCount(items.length)}`}
             </Text>

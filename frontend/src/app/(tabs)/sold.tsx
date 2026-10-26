@@ -5,17 +5,22 @@ import { ItemFormModal } from '@/components/item-form-modal';
 import { Thumbnail } from '@/components/thumbnail';
 import {
   BRAND_COLOR,
+  Button,
   CenteredSpinner,
+  CONDITION_OPTIONS,
   EmptyState,
   ErrorBanner,
   ErrorState,
+  FilterSelect,
   HeaderText,
   Money,
+  SearchField,
   profitColor,
   useWideLayout,
 } from '@/components/ui';
 import { useItemList } from '@/hooks/use-item-list';
 import { formatHuf, formatItemCount } from '@/lib/format';
+import { filterOptions, itemMatchesFilters, itemMatchesQuery, NO_FILTERS, type ItemFilters } from '@/lib/items';
 import type { Item, ItemStatus } from '@/lib/types';
 
 const SOLD: ItemStatus[] = ['sold'];
@@ -28,9 +33,17 @@ export default function SoldScreen() {
     'sold_date',
   );
   const [editing, setEditing] = useState<Item | null>(null);
+  const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<ItemFilters>(NO_FILTERS);
   const wide = useWideLayout();
 
-  const totalProfit = items.reduce((sum, item) => sum + profitOf(item), 0);
+  const searching = query.trim().length > 0;
+  const filtering = filters.brand !== null || filters.size !== null || filters.condition !== null;
+  const { brands, sizes } = filterOptions(items);
+  const visibleItems = items.filter(
+    (item) => itemMatchesQuery(item, query) && itemMatchesFilters(item, filters),
+  );
+  const totalProfit = visibleItems.reduce((sum, item) => sum + profitOf(item), 0);
 
   const thumbSize = wide ? 48 : 40;
   const rowClass = wide ? 'gap-4 px-4' : 'gap-2 px-3';
@@ -39,8 +52,39 @@ export default function SoldScreen() {
   return (
     <View className="flex-1 bg-slate-50">
       <View className="w-full max-w-5xl flex-1 self-center">
+        <View className="gap-2 px-3 py-3">
+          <SearchField value={query} onChangeText={setQuery} />
+          <View className="flex-row flex-wrap items-center gap-2">
+            {brands.length > 0 ? (
+              <FilterSelect
+                label="Brand"
+                options={brands.map((brand) => ({ value: brand, label: brand }))}
+                value={filters.brand}
+                onChange={(brand) => setFilters((current) => ({ ...current, brand }))}
+              />
+            ) : null}
+            {sizes.length > 0 ? (
+              <FilterSelect
+                label="Size"
+                options={sizes.map((size) => ({ value: size, label: size }))}
+                value={filters.size}
+                onChange={(size) => setFilters((current) => ({ ...current, size }))}
+              />
+            ) : null}
+            <FilterSelect
+              label="Condition"
+              options={CONDITION_OPTIONS}
+              value={filters.condition}
+              onChange={(condition) => setFilters((current) => ({ ...current, condition }))}
+            />
+            {filtering ? (
+              <Button title="Clear filters" variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
+            ) : null}
+          </View>
+        </View>
+
         {error && items.length > 0 ? (
-          <View className="px-3 pt-3">
+          <View className="px-3 pb-3">
             <ErrorBanner message={error} />
           </View>
         ) : null}
@@ -60,15 +104,19 @@ export default function SoldScreen() {
           <ErrorState message={error} onRetry={retry} />
         ) : (
           <FlatList
-            data={items}
+            data={visibleItems}
             keyExtractor={(item) => item.id}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={BRAND_COLOR} />
             }
             ListEmptyComponent={
-              <EmptyState title="Nothing sold yet">
-                Items you mark as sold show up here.
-              </EmptyState>
+              items.length === 0 ? (
+                <EmptyState title="Nothing sold yet">
+                  Items you mark as sold show up here.
+                </EmptyState>
+              ) : (
+                <EmptyState title="No items match your search" />
+              )
             }
             renderItem={({ item }) => {
               const profit = profitOf(item);
@@ -103,13 +151,15 @@ export default function SoldScreen() {
           />
         )}
 
-        {!loading && items.length > 0 ? (
+        {!loading && visibleItems.length > 0 ? (
           <View
             className={`flex-row items-center justify-between border-t border-slate-200 bg-white py-3 ${rowClass}`}>
             <Text className="text-base font-semibold text-slate-900">
-              Total profit
+              {searching || filtering ? 'Profit' : 'Total profit'}
               <Text className="text-sm font-normal text-slate-500">
-                {`  ·  ${formatItemCount(items.length)}`}
+                {searching || filtering
+                  ? `  ·  ${visibleItems.length} of ${formatItemCount(items.length)}`
+                  : `  ·  ${formatItemCount(items.length)}`}
               </Text>
             </Text>
             <Text className={`text-base font-bold ${profitColor(totalProfit)}`}>

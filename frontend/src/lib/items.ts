@@ -3,6 +3,7 @@ import { randomUUID } from 'expo-crypto';
 import { api, API_URL } from '@/lib/api';
 import type {
   Item,
+  ItemCondition,
   ItemPhoto,
   ItemStatus,
   ItemValues,
@@ -11,6 +12,43 @@ import type {
 } from '@/lib/types';
 
 const toNumber = (value: unknown) => (value == null ? null : Number(value));
+
+const SEARCHABLE_FIELDS = ['name', 'brand', 'size', 'measurements', 'flaws'] as const;
+
+/** Case-insensitive match against the fields a person would look an item up by. */
+export function itemMatchesQuery(item: Item, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return SEARCHABLE_FIELDS.some((field) => item[field]?.toLowerCase().includes(needle));
+}
+
+export type ItemFilters = { brand: string | null; size: string | null; condition: ItemCondition | null };
+
+export const NO_FILTERS: ItemFilters = { brand: null, size: null, condition: null };
+
+/** An item matches when it agrees with every filter that is set (`null` filters match anything). */
+export function itemMatchesFilters(item: Item, filters: ItemFilters): boolean {
+  return (
+    (filters.brand === null || item.brand === filters.brand) &&
+    (filters.size === null || item.size === filters.size) &&
+    (filters.condition === null || item.condition === filters.condition)
+  );
+}
+
+/** Distinct, sorted values of a text field among the given items (blanks excluded). */
+function distinctValues(items: Item[], field: 'brand' | 'size'): string[] {
+  const values = new Set<string>();
+  for (const item of items) {
+    const value = item[field];
+    if (value) values.add(value);
+  }
+  return [...values].sort((a, b) => a.localeCompare(b));
+}
+
+/** The brand and size values available to filter by, given the currently visible items. */
+export function filterOptions(items: Item[]): { brands: string[]; sizes: string[] } {
+  return { brands: distinctValues(items, 'brand'), sizes: distinctValues(items, 'size') };
+}
 
 function normalizeItem(row: Item): Item {
   return {
