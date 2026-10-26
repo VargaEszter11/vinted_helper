@@ -1,6 +1,7 @@
 import { STATUSES } from '../config.js';
 import { pool } from '../db.js';
 import { dissolveSmallBundles } from '../lib/bundles.js';
+import { CONDITIONS } from '../lib/item-recognition.js';
 import { deleteItemPhotoFiles } from '../lib/photo-files.js';
 import { photoLink } from '../lib/photo-links.js';
 import { idParams, isoDate, price } from './schemas.js';
@@ -40,6 +41,7 @@ const itemBody = {
     size: optionalText,
     measurements: optionalText,
     flaws: optionalText,
+    condition: { type: ['string', 'null'], enum: [...CONDITIONS, null] },
   },
 };
 
@@ -85,12 +87,13 @@ export default async function itemRoutes(app) {
     }
     const sold = b.status === 'sold';
     const { rowCount } = await pool.query(
-      `insert into items (id, user_id, name, bought_for, listed_for, status, sold_for, sold_date, brand, size, measurements, flaws)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `insert into items (id, user_id, name, bought_for, listed_for, status, sold_for, sold_date, brand, size, measurements, flaws, condition)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        on conflict (id) do update set
          name = excluded.name, bought_for = excluded.bought_for, listed_for = excluded.listed_for,
          status = excluded.status, sold_for = excluded.sold_for, sold_date = excluded.sold_date,
          brand = excluded.brand, size = excluded.size, measurements = excluded.measurements, flaws = excluded.flaws,
+         condition = excluded.condition,
          -- Taking an item off the market (in stock) or selling it on its own takes it out of its bundle.
          bundle_id = case
            when excluded.status = items.status or excluded.status = 'listed' then items.bundle_id
@@ -109,6 +112,7 @@ export default async function itemRoutes(app) {
         b.size ?? null,
         b.measurements ?? null,
         b.flaws ?? null,
+        b.condition ?? null,
       ],
     );
     if (rowCount === 0) return reply.code(404).send({ message: 'Item not found.' });

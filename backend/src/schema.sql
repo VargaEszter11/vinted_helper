@@ -30,6 +30,11 @@ create table if not exists items (
 
 create index if not exists items_user_id_status_idx on items (user_id, status);
 
+-- Added after the initial release. Same scale the Buy check AI uses; see CONDITIONS in
+-- lib/item-recognition.js.
+alter table items add column if not exists condition text
+  check (condition in ('new_with_tags', 'very_good', 'good', 'fair'));
+
 -- Several items listed together for one price. Items join through items.bundle_id.
 create table if not exists bundles (
   id uuid primary key default gen_random_uuid(),

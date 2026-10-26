@@ -1,10 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, Text, View } from 'react-native';
 
 import { NO_PRICES, PricesSection, type PricesState } from '@/components/buy-check-prices';
 import { PhotoTile, TILE_SIZE } from '@/components/photo-picker';
-import { BRAND_COLOR, Button, ErrorBanner, Field, PriceField } from '@/components/ui';
+import { BRAND_COLOR, Button, Chips, ErrorBanner, Field, PriceField } from '@/components/ui';
 import {
   BUY_CHECK_PHOTO_WIDTH,
   CATEGORY_OPTIONS,
@@ -338,42 +338,6 @@ function ResultCard({
         />
         <Text className="text-xs text-slate-500">{hint('condition')}</Text>
       </View>
-    </View>
-  );
-}
-
-/** A row of toggle chips: tap one to choose it, tap it again to clear. */
-function Chips({
-  options,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  options: { value: string; label: string }[];
-  value: string | null;
-  onChange: (value: string | null) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <View className="flex-row flex-wrap gap-2">
-      {options.map((option) => {
-        const selected = option.value === value;
-        return (
-          <Pressable
-            key={option.value}
-            onPress={() => onChange(selected ? null : option.value)}
-            disabled={disabled}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            className={`rounded-full border px-3 py-1.5 ${
-              selected ? 'border-teal-700 bg-teal-700' : 'border-slate-300 bg-white active:bg-slate-100'
-            } ${disabled ? 'opacity-50' : ''}`}>
-            <Text className={`text-sm font-medium ${selected ? 'text-white' : 'text-slate-700'}`}>
-              {option.label}
-            </Text>
-          </Pressable>
-        );
-      })}
     </View>
   );
 }

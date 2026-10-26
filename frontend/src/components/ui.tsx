@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps, ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,9 +11,22 @@ import {
 } from 'react-native';
 
 import { formatHuf } from '@/lib/format';
-import type { ItemStatus } from '@/lib/types';
+import type { ItemCondition, ItemStatus } from '@/lib/types';
 
 export const BRAND_COLOR = '#0f766e';
+
+/** Keeps the browser from drawing its own focus ring around a text input. */
+const NO_BROWSER_OUTLINE = { outlineStyle: 'none' } as unknown as ComponentProps<
+  typeof TextInput
+>['style'];
+
+/** Teal border and glow while focused, matching the search field. Red wins when the value is invalid. */
+function focusFrame(focused: boolean, error = false) {
+  return {
+    borderColor: error ? '#ef4444' : focused ? BRAND_COLOR : '#cbd5e1',
+    boxShadow: focused && !error ? '0 0 0 3px rgba(15, 118, 110, 0.25)' : undefined,
+  };
+}
 
 /** Tables switch from a compact phone layout to separate columns at this width. */
 export function useWideLayout(): boolean {
@@ -82,18 +95,31 @@ export function Field({
   error,
   hint,
   className = '',
+  style,
+  onFocus,
+  onBlur,
   ...inputProps
 }: TextInputProps & { label: string; error?: string; hint?: string; className?: string }) {
+  const [focused, setFocused] = useState(false);
   return (
     <View className={`gap-1 ${className}`}>
       <Text className="text-sm font-medium text-slate-700">{label}</Text>
       <TextInput
         accessibilityLabel={label}
         placeholderTextColor="#94a3b8"
-        className={`rounded-lg border bg-white px-3 py-2.5 text-base text-slate-900 ${
-          error ? 'border-red-500' : 'border-slate-300'
-        }`}
+        selectionColor={BRAND_COLOR}
+        className="rounded-lg border bg-white px-3 py-2.5 text-base text-slate-900"
         {...inputProps}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
+        // Border color stays in `style`: swapping it through classes remounts the field on native.
+        style={[NO_BROWSER_OUTLINE, style, focusFrame(focused, Boolean(error))]}
       />
       {error ? (
         <Text className="text-xs text-red-600">{error}</Text>
@@ -168,6 +194,53 @@ export function StatusBadge({ status }: { status: ItemStatus }) {
   return (
     <View className={`self-start rounded-full px-2 py-0.5 ${styles.box}`}>
       <Text className={`text-xs font-medium ${styles.text}`}>{STATUS_LABELS[status]}</Text>
+    </View>
+  );
+}
+
+export const CONDITION_OPTIONS: { value: ItemCondition; label: string }[] = [
+  { value: 'new_with_tags', label: 'New with tags' },
+  { value: 'very_good', label: 'Very good' },
+  { value: 'good', label: 'Good' },
+  { value: 'fair', label: 'Fair' },
+];
+
+export const CONDITION_LABELS: Record<ItemCondition, string> = Object.fromEntries(
+  CONDITION_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<ItemCondition, string>;
+
+/** A row of toggle chips: tap one to choose it, tap it again to clear (back to `null`). */
+export function Chips<T extends string>({
+  options,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  options: { value: T; label: string }[];
+  value: T | null;
+  onChange: (value: T | null) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <View className="flex-row flex-wrap gap-2">
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => onChange(selected ? null : option.value)}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            className={`rounded-full border px-3 py-1.5 ${
+              selected ? 'border-teal-700 bg-teal-700' : 'border-slate-300 bg-white active:bg-slate-100'
+            } ${disabled ? 'opacity-50' : ''}`}>
+            <Text className={`text-sm font-medium ${selected ? 'text-white' : 'text-slate-700'}`}>
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

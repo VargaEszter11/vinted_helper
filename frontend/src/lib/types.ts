@@ -1,5 +1,8 @@
 export type ItemStatus = 'in_stock' | 'listed' | 'sold';
 
+/** Same scale the Buy check AI uses (see CONDITIONS in the backend). */
+export type ItemCondition = 'new_with_tags' | 'very_good' | 'good' | 'fair';
+
 export type StatusChange = {
   status: ItemStatus;
   changed_at: string;
@@ -27,6 +30,7 @@ export type Item = {
   size: string | null;
   measurements: string | null;
   flaws: string | null;
+  condition: ItemCondition | null;
   created_at: string;
   /** When the status last changed; set by the database. */
   status_changed_at: string;
@@ -48,6 +52,7 @@ export type ItemValues = Pick<
   | 'size'
   | 'measurements'
   | 'flaws'
+  | 'condition'
 >;
 
 /** A photo picked on this device that has not been uploaded yet. */

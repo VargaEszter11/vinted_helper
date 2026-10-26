@@ -5,6 +5,8 @@ import { ModalSheet } from '@/components/modal-sheet';
 import { PhotoPicker } from '@/components/photo-picker';
 import {
   Button,
+  CONDITION_OPTIONS,
+  Chips,
   ErrorBanner,
   Field,
   PriceField,
@@ -23,7 +25,15 @@ import {
   todayIso,
 } from '@/lib/format';
 import { deleteItem, fetchStatusHistory, newItemId, saveItem } from '@/lib/items';
-import type { Item, ItemPhoto, ItemStatus, ItemValues, LocalPhoto, StatusChange } from '@/lib/types';
+import type {
+  Item,
+  ItemCondition,
+  ItemPhoto,
+  ItemStatus,
+  ItemValues,
+  LocalPhoto,
+  StatusChange,
+} from '@/lib/types';
 
 const STATUS_OPTIONS = (['in_stock', 'listed', 'sold'] as const).map((value) => ({
   value,
@@ -58,6 +68,7 @@ export function ItemFormModal({
   const [size, setSize] = useState(item?.size ?? '');
   const [measurements, setMeasurements] = useState(item?.measurements ?? '');
   const [flaws, setFlaws] = useState(item?.flaws ?? '');
+  const [condition, setCondition] = useState<ItemCondition | null>(item?.condition ?? null);
   const [keptPhotos, setKeptPhotos] = useState<ItemPhoto[]>(item?.item_photos ?? []);
   const [newPhotos, setNewPhotos] = useState<LocalPhoto[]>([]);
   const photoUrls = Object.fromEntries(
@@ -116,6 +127,7 @@ export function ItemFormModal({
       size: optionalText(size),
       measurements: optionalText(measurements),
       flaws: optionalText(flaws),
+      condition,
     };
   }
 
@@ -229,6 +241,10 @@ export function ItemFormModal({
           editable={!disabled}
           className="flex-1"
         />
+      </View>
+      <View className="gap-1">
+        <Text className="text-sm font-medium text-slate-700">Condition</Text>
+        <Chips options={CONDITION_OPTIONS} value={condition} onChange={setCondition} disabled={disabled} />
       </View>
       <View className="flex-row gap-3">
         <PriceField
