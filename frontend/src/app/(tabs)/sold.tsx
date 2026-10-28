@@ -22,7 +22,17 @@ import {
 import { useItemList } from '@/hooks/use-item-list';
 import { formatHuf, formatItemCount } from '@/lib/format';
 import { vintedCategoryById } from '@/lib/item-vinted-categories';
-import { filterOptions, itemMatchesFilters, itemMatchesQuery, NO_FILTERS, type ItemFilters } from '@/lib/items';
+import {
+  DEFAULT_ITEM_SORT,
+  filterOptions,
+  ITEM_SORT_OPTIONS,
+  itemMatchesFilters,
+  itemMatchesQuery,
+  NO_FILTERS,
+  sortItems,
+  type ItemFilters,
+  type ItemSort,
+} from '@/lib/items';
 import type { Item, ItemStatus } from '@/lib/types';
 
 const SOLD: ItemStatus[] = ['sold'];
@@ -37,6 +47,7 @@ export default function SoldScreen() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<ItemFilters>(NO_FILTERS);
+  const [sortBy, setSortBy] = useState<ItemSort>(DEFAULT_ITEM_SORT);
   const wide = useWideLayout();
 
   const searching = query.trim().length > 0;
@@ -57,6 +68,10 @@ export default function SoldScreen() {
   }, [categories, filters.category]);
   const visibleItems = items.filter(
     (item) => itemMatchesQuery(item, query) && itemMatchesFilters(item, filters),
+  );
+  const sortedVisible = useMemo(
+    () => sortItems(visibleItems, sortBy, 'sold'),
+    [visibleItems, sortBy],
   );
   const totalProfit = visibleItems.reduce((sum, item) => sum + profitOf(item), 0);
 
@@ -97,6 +112,15 @@ export default function SoldScreen() {
               options={categoryFilterOptions}
               onChange={(category) => setFilters((current) => ({ ...current, category }))}
             />
+            <FilterSelect
+              label="Sort"
+              clearable={false}
+              keepButtonLabel
+              defaultValue={DEFAULT_ITEM_SORT}
+              options={ITEM_SORT_OPTIONS}
+              value={sortBy}
+              onChange={(next) => next && setSortBy(next)}
+            />
             {filtering ? (
               <Button title="Clear filters" variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
             ) : null}
@@ -124,7 +148,7 @@ export default function SoldScreen() {
           <ErrorState message={error} onRetry={retry} />
         ) : (
           <FlatList
-            data={visibleItems}
+            data={sortedVisible}
             keyExtractor={(item) => item.id}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={BRAND_COLOR} />

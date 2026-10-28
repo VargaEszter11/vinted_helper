@@ -27,7 +27,17 @@ import {
 import { useItemList } from '@/hooks/use-item-list';
 import { formatItemCount } from '@/lib/format';
 import { vintedCategoryById } from '@/lib/item-vinted-categories';
-import { filterOptions, itemMatchesFilters, itemMatchesQuery, NO_FILTERS, type ItemFilters } from '@/lib/items';
+import {
+  DEFAULT_ITEM_SORT,
+  filterOptions,
+  ITEM_SORT_OPTIONS,
+  itemMatchesFilters,
+  itemMatchesQuery,
+  NO_FILTERS,
+  sortItems,
+  type ItemFilters,
+  type ItemSort,
+} from '@/lib/items';
 import type { Item, ItemStatus } from '@/lib/types';
 
 const UNSOLD: ItemStatus[] = ['in_stock', 'listed'];
@@ -78,6 +88,7 @@ export default function ItemsScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<ItemFilters>(NO_FILTERS);
+  const [sortBy, setSortBy] = useState<ItemSort>(DEFAULT_ITEM_SORT);
   // undefined: closed, null: adding a new item
   const [editing, setEditing] = useState<Item | null | undefined>(undefined);
   const [selling, setSelling] = useState<Item | null>(null);
@@ -113,7 +124,11 @@ export default function ItemsScreen() {
   const visibleItems = statusItems.filter(
     (item) => matches(item) || (item.bundle_id != null && matchedBundleIds.has(item.bundle_id)),
   );
-  const rows = buildRows(visibleItems, items);
+  const sortedVisible = useMemo(
+    () => sortItems(visibleItems, sortBy, 'listed'),
+    [visibleItems, sortBy],
+  );
+  const rows = buildRows(sortedVisible, items);
   const selecting = selected !== null;
 
   const thumbSize = wide ? 48 : 40;
@@ -308,6 +323,15 @@ export default function ItemsScreen() {
               value={filters.category}
               options={categoryFilterOptions}
               onChange={(category) => setFilters((current) => ({ ...current, category }))}
+            />
+            <FilterSelect
+              label="Sort"
+              clearable={false}
+              keepButtonLabel
+              defaultValue={DEFAULT_ITEM_SORT}
+              options={ITEM_SORT_OPTIONS}
+              value={sortBy}
+              onChange={(next) => next && setSortBy(next)}
             />
             {filtering ? (
               <Button title="Clear filters" variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />

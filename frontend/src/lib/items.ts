@@ -78,6 +78,71 @@ export function filterOptions(items: Item[]): {
   };
 }
 
+export type ItemSort =
+  | 'status_changed_desc'
+  | 'status_changed_asc'
+  | 'name_asc'
+  | 'name_desc'
+  | 'price_asc'
+  | 'price_desc';
+
+export const DEFAULT_ITEM_SORT: ItemSort = 'status_changed_desc';
+
+export const ITEM_SORT_OPTIONS: { value: ItemSort; label: string }[] = [
+  { value: 'status_changed_desc', label: 'Status change (newest)' },
+  { value: 'status_changed_asc', label: 'Status change (oldest)' },
+  { value: 'name_asc', label: 'Name (A–Z)' },
+  { value: 'name_desc', label: 'Name (Z–A)' },
+  { value: 'price_desc', label: 'Price (high → low)' },
+  { value: 'price_asc', label: 'Price (low → high)' },
+];
+
+/** Listed tab: bundle price, then listed, then cost. Sold tab: sold price. */
+function sortPrice(item: Item, context: 'listed' | 'sold'): number | null {
+  if (context === 'sold') return item.sold_for;
+  return item.bundle_listed_for ?? item.listed_for ?? item.bought_for;
+}
+
+const compareTime = (a: string, b: string) => new Date(a).getTime() - new Date(b).getTime();
+
+const compareName = (a: Item, b: Item) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+
+function comparePrice(a: Item, b: Item, ascending: boolean, context: 'listed' | 'sold') {
+  const pa = sortPrice(a, context);
+  const pb = sortPrice(b, context);
+  const aMissing = pa == null;
+  const bMissing = pb == null;
+  if (aMissing && bMissing) return compareName(a, b);
+  if (aMissing) return 1;
+  if (bMissing) return -1;
+  const diff = pa - pb;
+  return ascending ? diff || compareName(a, b) : -diff || compareName(a, b);
+}
+
+/** Stable sort for list rows after search and filters. */
+export function sortItems(items: Item[], sort: ItemSort, priceContext: 'listed' | 'sold'): Item[] {
+  const out = [...items];
+  out.sort((a, b) => {
+    switch (sort) {
+      case 'name_asc':
+        return compareName(a, b);
+      case 'name_desc':
+        return compareName(b, a);
+      case 'status_changed_asc':
+        return compareTime(a.status_changed_at, b.status_changed_at) || compareName(a, b);
+      case 'status_changed_desc':
+        return compareTime(b.status_changed_at, a.status_changed_at) || compareName(a, b);
+      case 'price_asc':
+        return comparePrice(a, b, true, priceContext);
+      case 'price_desc':
+        return comparePrice(a, b, false, priceContext);
+      default:
+        return 0;
+    }
+  });
+  return out;
+}
+
 function normalizeItem(row: Item): Item {
   return {
     ...row,

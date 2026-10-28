@@ -298,15 +298,26 @@ export function FilterSelect<T extends string>({
   value,
   options,
   onChange,
+  clearable = true,
+  keepButtonLabel = false,
+  defaultValue,
 }: {
   label: string;
   value: T | null;
   options: { value: T; label: string }[];
   onChange: (value: T | null) => void;
+  /** When false, every option must stay selected (e.g. sort). */
+  clearable?: boolean;
+  /** Always show `label` on the chip (sort menus). */
+  keepButtonLabel?: boolean;
+  /** With `keepButtonLabel`, highlight when value differs from this (e.g. non-default sort). */
+  defaultValue?: T;
 }) {
   const [open, setOpen] = useState(false);
   const selectedLabel = options.find((option) => option.value === value)?.label;
-  const active = selectedLabel != null;
+  const active = clearable
+    ? selectedLabel != null
+    : defaultValue !== undefined && value !== null && value !== defaultValue;
 
   function choose(next: T | null) {
     onChange(next);
@@ -318,14 +329,14 @@ export function FilterSelect<T extends string>({
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Filter by ${label}`}
+        accessibilityLabel={keepButtonLabel ? `Sort by ${label}` : `Filter by ${label}`}
         className={`flex-row items-center gap-1 rounded-lg border px-3 py-2 ${
           active ? 'border-teal-700 bg-teal-50' : 'border-slate-300 bg-white active:bg-slate-100'
         }`}>
         <Text
           numberOfLines={1}
           className={`max-w-[120px] text-sm ${active ? 'font-semibold text-teal-800' : 'text-slate-700'}`}>
-          {selectedLabel ?? label}
+          {keepButtonLabel ? label : (selectedLabel ?? label)}
         </Text>
         <Ionicons name="chevron-down" size={14} color={active ? BRAND_COLOR : '#64748b'} />
       </Pressable>
@@ -348,7 +359,13 @@ export function FilterSelect<T extends string>({
               </Pressable>
             </View>
             <ScrollView contentContainerClassName="p-2">
-              <FilterOption label={`All (${label.toLowerCase()})`} selected={value === null} onPress={() => choose(null)} />
+              {clearable ? (
+                <FilterOption
+                  label={`All (${label.toLowerCase()})`}
+                  selected={value === null}
+                  onPress={() => choose(null)}
+                />
+              ) : null}
               {options.map((option) => (
                 <FilterOption
                   key={option.value}
