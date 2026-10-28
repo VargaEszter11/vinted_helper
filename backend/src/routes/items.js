@@ -1,8 +1,11 @@
 import { STATUSES } from '../config.js';
 import { pool } from '../db.js';
 import { dissolveSmallBundles } from '../lib/bundles.js';
-import { CONDITIONS } from '../lib/item-recognition.js';
+import { CONDITIONS, RecognitionError } from '../lib/item-recognition.js';
+import { isValidVintedCategoryId } from '../lib/vinted-categories.js';
+import { isJpeg } from '../lib/images.js';
 import { deleteItemPhotoFiles } from '../lib/photo-files.js';
+import { suggestItemCategory } from '../lib/suggest-item-category.js';
 import { photoLink } from '../lib/photo-links.js';
 import { idParams, isoDate, price } from './schemas.js';
 
@@ -42,11 +45,75 @@ const itemBody = {
     measurements: optionalText,
     flaws: optionalText,
     condition: { type: ['string', 'null'], enum: [...CONDITIONS, null] },
+    category: { type: ['string', 'null'], maxLength: 200 },
   },
 };
 
+const optionalShortText = { type: ['string', 'null'], maxLength: 2000 };
+
 export default async function itemRoutes(app) {
   const auth = { onRequest: [app.authenticate] };
+
+  app.post(
+    '/items/suggest-category',
+    {
+      ...auth,
+      schema: {
+        body: {
+          type: 'object',
+          required: ['name'],
+          additionalProperties: false,
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 200 },
+            brand: optionalShortText,
+            size: optionalShortText,
+            measurements: optionalShortText,
+            flaws: optionalShortText,
+            item_id: { type: ['string', 'null'], format: 'uuid' },
+            images: {
+              type: 'array',
+              maxItems: 3,
+              items: { type: 'string', minLength: 100 },
+            },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const body = req.body;
+      const clientImages = body.images ?? [];
+      if (clientImages.length > 0 && !clientImages.every(isJpeg)) {
+        return reply.code(400).send({ message: 'Photos must be JPEG files of at most 1.5 MB each.' });
+      }
+      const details = {
+        name: body.name,
+        brand: body.brand ?? null,
+        size: body.size ?? null,
+        measurements: body.measurements ?? null,
+        flaws: body.flaws ?? null,
+      };
+      try {
+        const result = await suggestItemCategory(req.user.sub, details, {
+          itemId: body.item_id ?? null,
+          clientImages,
+        });
+        req.log.info({ usage: result.usage, photos: result.used_photos }, 'suggest item category');
+        return { category: result.category };
+      } catch (error) {
+        if (error instanceof RecognitionError) {
+          if (error.providerStatus) {
+            req.log.error(
+              { providerStatus: error.providerStatus, providerDetail: error.providerDetail },
+              'category suggestion provider error',
+            );
+          }
+          return reply.code(error.status).send({ message: error.message });
+        }
+        req.log.error(error, 'suggest item category failed');
+        return reply.code(502).send({ message: 'Something went wrong. Try again.' });
+      }
+    },
+  );
 
   app.get(
     '/items',
@@ -85,15 +152,18 @@ export default async function itemRoutes(app) {
     if (b.status === 'sold' && (b.sold_for == null || b.sold_date == null)) {
       return reply.code(400).send({ message: 'Sold items need a sold price and date.' });
     }
+    if (b.category != null && !isValidVintedCategoryId(b.category)) {
+      return reply.code(400).send({ message: 'Unknown category.' });
+    }
     const sold = b.status === 'sold';
     const { rowCount } = await pool.query(
-      `insert into items (id, user_id, name, bought_for, listed_for, status, sold_for, sold_date, brand, size, measurements, flaws, condition)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `insert into items (id, user_id, name, bought_for, listed_for, status, sold_for, sold_date, brand, size, measurements, flaws, condition, category)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        on conflict (id) do update set
          name = excluded.name, bought_for = excluded.bought_for, listed_for = excluded.listed_for,
          status = excluded.status, sold_for = excluded.sold_for, sold_date = excluded.sold_date,
          brand = excluded.brand, size = excluded.size, measurements = excluded.measurements, flaws = excluded.flaws,
-         condition = excluded.condition,
+         condition = excluded.condition, category = excluded.category,
          -- Taking an item off the market (in stock) or selling it on its own takes it out of its bundle.
          bundle_id = case
            when excluded.status = items.status or excluded.status = 'listed' then items.bundle_id
@@ -113,6 +183,7 @@ export default async function itemRoutes(app) {
         b.measurements ?? null,
         b.flaws ?? null,
         b.condition ?? null,
+        b.category ?? null,
       ],
     );
     if (rowCount === 0) return reply.code(404).send({ message: 'Item not found.' });

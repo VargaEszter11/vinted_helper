@@ -82,7 +82,8 @@ function userText(entered) {
   ].join('\n\n');
 }
 
-async function callProvider(messages) {
+/** OpenAI-compatible chat call to DeepSeek (shared by Buy check and item category). */
+export async function deepseekChat(messages) {
   let response;
   try {
     response = await fetch(`${PROVIDER_BASE_URL}/chat/completions`, {
@@ -192,14 +193,14 @@ export async function identifyItem(images, entered) {
   ];
 
   const usage = { prompt_tokens: 0, completion_tokens: 0 };
-  let reply = await callProvider(messages);
+  let reply = await deepseekChat(messages);
   usage.prompt_tokens += reply.usage.prompt_tokens;
   usage.completion_tokens += reply.usage.completion_tokens;
 
   let fields = parseReply(reply.content);
   if (!fields) {
     // One retry: show the model its bad reply and ask again.
-    reply = await callProvider([
+    reply = await deepseekChat([
       ...messages,
       { role: 'assistant', content: reply.content.slice(0, 2000) },
       { role: 'user', content: RETRY_PROMPT },

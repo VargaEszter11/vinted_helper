@@ -1,6 +1,7 @@
 import { randomUUID } from 'expo-crypto';
 
 import { api, API_URL } from '@/lib/api';
+import { vintedCategoryById, type ItemVintedCategory } from '@/lib/item-vinted-categories';
 import type {
   Item,
   ItemCondition,
@@ -22,16 +23,22 @@ export function itemMatchesQuery(item: Item, query: string): boolean {
   return SEARCHABLE_FIELDS.some((field) => item[field]?.toLowerCase().includes(needle));
 }
 
-export type ItemFilters = { brand: string | null; size: string | null; condition: ItemCondition | null };
+export type ItemFilters = {
+  brand: string | null;
+  size: string | null;
+  condition: ItemCondition | null;
+  category: ItemVintedCategory | null;
+};
 
-export const NO_FILTERS: ItemFilters = { brand: null, size: null, condition: null };
+export const NO_FILTERS: ItemFilters = { brand: null, size: null, condition: null, category: null };
 
 /** An item matches when it agrees with every filter that is set (`null` filters match anything). */
 export function itemMatchesFilters(item: Item, filters: ItemFilters): boolean {
   return (
     (filters.brand === null || item.brand === filters.brand) &&
     (filters.size === null || item.size === filters.size) &&
-    (filters.condition === null || item.condition === filters.condition)
+    (filters.condition === null || item.condition === filters.condition) &&
+    (filters.category === null || item.category === filters.category)
   );
 }
 
@@ -45,9 +52,30 @@ function distinctValues(items: Item[], field: 'brand' | 'size'): string[] {
   return [...values].sort((a, b) => a.localeCompare(b));
 }
 
-/** The brand and size values available to filter by, given the currently visible items. */
-export function filterOptions(items: Item[]): { brands: string[]; sizes: string[] } {
-  return { brands: distinctValues(items, 'brand'), sizes: distinctValues(items, 'size') };
+/** Distinct Vinted categories among items, sorted by display path. */
+function distinctCategories(items: Item[]): { value: ItemVintedCategory; label: string }[] {
+  const byId = new Map<ItemVintedCategory, string>();
+  for (const item of items) {
+    if (!item.category || byId.has(item.category)) continue;
+    const entry = vintedCategoryById(item.category);
+    byId.set(item.category, entry?.path ?? item.category);
+  }
+  return [...byId.entries()]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** Values available to filter by, given the items in the current status tab. */
+export function filterOptions(items: Item[]): {
+  brands: string[];
+  sizes: string[];
+  categories: { value: ItemVintedCategory; label: string }[];
+} {
+  return {
+    brands: distinctValues(items, 'brand'),
+    sizes: distinctValues(items, 'size'),
+    categories: distinctCategories(items),
+  };
 }
 
 function normalizeItem(row: Item): Item {
@@ -69,6 +97,36 @@ export async function fetchItems(
 ): Promise<Item[]> {
   const rows = await api<Item[]>(`/items?status=${statuses.join(',')}&orderBy=${orderBy}`);
   return rows.map(normalizeItem);
+}
+
+export type SuggestCategoryInput = {
+  name: string;
+  brand?: string | null;
+  size?: string | null;
+  measurements?: string | null;
+  flaws?: string | null;
+  /** Client-generated id; lets the server read photos already uploaded for this item. */
+  item_id?: string;
+  /** Base64 JPEGs picked on this device but not saved yet (at most 3). */
+  images?: string[];
+};
+
+/** Uses DeepSeek (same provider as Buy check) to suggest a category from the description and photos. */
+export function suggestItemCategory(
+  input: SuggestCategoryInput,
+): Promise<{ category: ItemVintedCategory }> {
+  return api('/items/suggest-category', {
+    method: 'POST',
+    body: {
+      name: input.name.trim(),
+      brand: input.brand?.trim() || null,
+      size: input.size?.trim() || null,
+      measurements: input.measurements?.trim() || null,
+      flaws: input.flaws?.trim() || null,
+      item_id: input.item_id ?? null,
+      images: input.images,
+    },
+  });
 }
 
 /**

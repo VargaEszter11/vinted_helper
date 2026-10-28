@@ -1,4 +1,8 @@
+import type { ItemVintedCategory } from '@/lib/item-vinted-categories';
+
 export type ItemStatus = 'in_stock' | 'listed' | 'sold';
+
+export type { ItemVintedCategory };
 
 /** Same scale the Buy check AI uses (see CONDITIONS in the backend). */
 export type ItemCondition = 'new_with_tags' | 'very_good' | 'good' | 'fair';
@@ -31,6 +35,7 @@ export type Item = {
   measurements: string | null;
   flaws: string | null;
   condition: ItemCondition | null;
+  category: ItemVintedCategory | null;
   created_at: string;
   /** When the status last changed; set by the database. */
   status_changed_at: string;
@@ -53,6 +58,7 @@ export type ItemValues = Pick<
   | 'measurements'
   | 'flaws'
   | 'condition'
+  | 'category'
 >;
 
 /** A photo picked on this device that has not been uploaded yet. */

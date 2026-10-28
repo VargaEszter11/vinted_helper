@@ -35,6 +35,11 @@ create index if not exists items_user_id_status_idx on items (user_id, status);
 alter table items add column if not exists condition text
   check (condition in ('new_with_tags', 'very_good', 'good', 'fair'));
 
+-- Vinted-style leaf category id (see lib/vinted-categories.js). Validated in the API, not in SQL.
+alter table items add column if not exists category text;
+
+alter table items drop constraint if exists items_category_check;
+
 -- Several items listed together for one price. Items join through items.bundle_id.
 create table if not exists bundles (
   id uuid primary key default gen_random_uuid(),

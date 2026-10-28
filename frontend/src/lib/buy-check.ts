@@ -17,16 +17,7 @@ export const CONDITION_OPTIONS: { value: ConditionValue; label: string }[] = [
   { value: 'fair', label: 'Fair' },
 ];
 
-export const CATEGORY_OPTIONS = [
-  { value: 'tops', label: 'Tops' },
-  { value: 'bottoms', label: 'Bottoms' },
-  { value: 'dresses', label: 'Dresses' },
-  { value: 'outerwear', label: 'Outerwear' },
-  { value: 'shoes', label: 'Shoes' },
-  { value: 'bags', label: 'Bags' },
-  { value: 'accessories', label: 'Accessories' },
-  { value: 'other', label: 'Other' },
-];
+export { CATEGORY_OPTIONS, type ItemCategory } from '@/lib/categories';
 
 export type Confidence = 'low' | 'medium' | 'high';
 

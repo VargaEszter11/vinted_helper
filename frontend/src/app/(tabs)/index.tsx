@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
+import { CategoryFilterSelect } from '@/components/category-picker';
 import { BundleModal } from '@/components/bundle-modal';
 import { ItemFormModal } from '@/components/item-form-modal';
 import { MarkBundleSoldModal } from '@/components/mark-bundle-sold-modal';
@@ -25,6 +26,7 @@ import {
 } from '@/components/ui';
 import { useItemList } from '@/hooks/use-item-list';
 import { formatItemCount } from '@/lib/format';
+import { vintedCategoryById } from '@/lib/item-vinted-categories';
 import { filterOptions, itemMatchesFilters, itemMatchesQuery, NO_FILTERS, type ItemFilters } from '@/lib/items';
 import type { Item, ItemStatus } from '@/lib/types';
 
@@ -87,9 +89,22 @@ export default function ItemsScreen() {
   const wide = useWideLayout();
 
   const searching = query.trim().length > 0;
-  const filtering = filters.brand !== null || filters.size !== null || filters.condition !== null;
+  const filtering =
+    filters.brand !== null ||
+    filters.size !== null ||
+    filters.condition !== null ||
+    filters.category !== null;
   const statusItems = filter === 'all' ? items : items.filter((item) => item.status === filter);
-  const { brands, sizes } = filterOptions(statusItems);
+  const { brands, sizes, categories } = filterOptions(statusItems);
+  const categoryFilterOptions = useMemo(() => {
+    if (!filters.category || categories.some((option) => option.value === filters.category)) {
+      return categories;
+    }
+    const path = vintedCategoryById(filters.category)?.path ?? filters.category;
+    return [...categories, { value: filters.category, label: path }].sort((a, b) =>
+      a.label.localeCompare(b.label),
+    );
+  }, [categories, filters.category]);
   const matches = (item: Item) => itemMatchesQuery(item, query) && itemMatchesFilters(item, filters);
   // A bundle stays together when any of its items match, so the bundle price still makes sense.
   const matchedBundleIds = new Set(
@@ -288,6 +303,11 @@ export default function ItemsScreen() {
               options={CONDITION_OPTIONS}
               value={filters.condition}
               onChange={(condition) => setFilters((current) => ({ ...current, condition }))}
+            />
+            <CategoryFilterSelect
+              value={filters.category}
+              options={categoryFilterOptions}
+              onChange={(category) => setFilters((current) => ({ ...current, category }))}
             />
             {filtering ? (
               <Button title="Clear filters" variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />

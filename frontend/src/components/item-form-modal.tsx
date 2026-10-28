@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { ModalSheet } from '@/components/modal-sheet';
 import { PhotoPicker } from '@/components/photo-picker';
 import {
+  BRAND_COLOR,
   Button,
   CONDITION_OPTIONS,
   Chips,
@@ -24,9 +25,11 @@ import {
   priceToInput,
   todayIso,
 } from '@/lib/format';
-import { deleteItem, fetchStatusHistory, newItemId, saveItem } from '@/lib/items';
+import { CategoryPicker } from '@/components/category-picker';
+import { deleteItem, fetchStatusHistory, newItemId, saveItem, suggestItemCategory } from '@/lib/items';
 import type {
   Item,
+  ItemVintedCategory,
   ItemCondition,
   ItemPhoto,
   ItemStatus,
@@ -41,6 +44,7 @@ const STATUS_OPTIONS = (['in_stock', 'listed', 'sold'] as const).map((value) => 
 }));
 
 const MULTILINE_STYLE = { minHeight: 72, textAlignVertical: 'top' } as const;
+const AUTO_SUGGEST_MS = 900;
 
 /** Empty optional text is stored as null. */
 const optionalText = (value: string) => value.trim() || null;
@@ -69,6 +73,13 @@ export function ItemFormModal({
   const [measurements, setMeasurements] = useState(item?.measurements ?? '');
   const [flaws, setFlaws] = useState(item?.flaws ?? '');
   const [condition, setCondition] = useState<ItemCondition | null>(item?.condition ?? null);
+  const [category, setCategory] = useState<ItemVintedCategory | null>(item?.category ?? null);
+  const [categoryFromAi, setCategoryFromAi] = useState(false);
+  /** Stops auto-suggest after the user picks a category (including one loaded from the server). */
+  const [categoryLocked, setCategoryLocked] = useState(() => Boolean(item?.category));
+  const [suggestingCategory, setSuggestingCategory] = useState(false);
+  const [categorySuggestError, setCategorySuggestError] = useState<string | null>(null);
+  const suggestRun = useRef(0);
   const [keptPhotos, setKeptPhotos] = useState<ItemPhoto[]>(item?.item_photos ?? []);
   const [newPhotos, setNewPhotos] = useState<LocalPhoto[]>([]);
   const photoUrls = Object.fromEntries(
@@ -128,8 +139,56 @@ export function ItemFormModal({
       measurements: optionalText(measurements),
       flaws: optionalText(flaws),
       condition,
+      category,
     };
   }
+
+  const suggestKey = useMemo(
+    () =>
+      [
+        name,
+        brand,
+        size,
+        measurements,
+        flaws,
+        newPhotos.map((photo) => photo.key).join(','),
+        keptPhotos.map((photo) => photo.id).join(','),
+      ].join('\n'),
+    [name, brand, size, measurements, flaws, newPhotos, keptPhotos],
+  );
+
+  useEffect(() => {
+    if (categoryLocked || name.trim() === '' || busy !== null) return;
+
+    const timer = setTimeout(() => {
+      const run = ++suggestRun.current;
+      setSuggestingCategory(true);
+      setCategorySuggestError(null);
+      void suggestItemCategory({
+        name,
+        brand: optionalText(brand),
+        size: optionalText(size),
+        measurements: optionalText(measurements),
+        flaws: optionalText(flaws),
+        item_id: itemId,
+        images: newPhotos.map((photo) => photo.base64).slice(0, 3),
+      })
+        .then((result) => {
+          if (run !== suggestRun.current) return;
+          setCategory(result.category);
+          setCategoryFromAi(true);
+        })
+        .catch((e) => {
+          if (run !== suggestRun.current) return;
+          setCategorySuggestError(errorMessage(e));
+        })
+        .finally(() => {
+          if (run === suggestRun.current) setSuggestingCategory(false);
+        });
+    }, AUTO_SUGGEST_MS);
+
+    return () => clearTimeout(timer);
+  }, [suggestKey, categoryLocked, busy, name, brand, size, measurements, flaws, itemId, newPhotos]);
 
   async function toggleMore() {
     const next = !showMore;
@@ -183,6 +242,13 @@ export function ItemFormModal({
   }
 
   const disabled = busy !== null;
+
+  function changeCategory(next: ItemVintedCategory | null) {
+    setCategory(next);
+    setCategoryFromAi(false);
+    setCategoryLocked(next != null);
+    setCategorySuggestError(null);
+  }
 
   return (
     <ModalSheet
@@ -245,6 +311,29 @@ export function ItemFormModal({
       <View className="gap-1">
         <Text className="text-sm font-medium text-slate-700">Condition</Text>
         <Chips options={CONDITION_OPTIONS} value={condition} onChange={setCondition} disabled={disabled} />
+      </View>
+      <View className="gap-1">
+        <View className="flex-row items-center gap-2">
+          <Text className="text-sm font-medium text-slate-700">Category</Text>
+          {suggestingCategory ? <ActivityIndicator size="small" color={BRAND_COLOR} /> : null}
+        </View>
+        <CategoryPicker value={category} onChange={changeCategory} disabled={disabled} />
+        {categorySuggestError ? (
+          <Text className="text-xs text-red-600">{categorySuggestError}</Text>
+        ) : categoryLocked ? (
+          <Text className="text-xs text-slate-500">You chose this category — clear it to get a new suggestion.</Text>
+        ) : categoryFromAi ? (
+          <Text className="text-xs text-slate-500">
+            Picked automatically from your details{newPhotos.length > 0 || keptPhotos.length > 0 ? ' and photos' : ''}.
+            Open the list to override.
+          </Text>
+        ) : suggestingCategory ? (
+          <Text className="text-xs text-slate-500">Finding a category…</Text>
+        ) : name.trim() === '' ? (
+          <Text className="text-xs text-slate-500">Add a name to get a category suggestion.</Text>
+        ) : (
+          <Text className="text-xs text-slate-500">Updates when you change the description or photos.</Text>
+        )}
       </View>
       <View className="flex-row gap-3">
         <PriceField
