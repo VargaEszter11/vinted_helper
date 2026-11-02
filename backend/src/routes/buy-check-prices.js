@@ -4,7 +4,7 @@ import { MAX_IMAGE_BYTES, isJpeg } from '../lib/images.js';
 import { CATEGORIES, CONDITIONS } from '../lib/item-recognition.js';
 import { plainText } from '../lib/item-category.js';
 import { findOwnSales } from '../lib/own-sales.js';
-import { COUNTRY_CODES, CURRENCY_CODES, convertAmount, resolveMarket } from '../lib/markets.js';
+import { COUNTRY_CODES, CURRENCY_CODES, convertAmount, preferLocalListings, resolveMarket } from '../lib/markets.js';
 import { LookupUnavailableError, SEARCH_VERSION, searchPrices } from '../lib/price-search.js';
 import { VERDICT_CONFIG, computeVerdict } from '../lib/verdict.js';
 import { addVisualMatch } from '../lib/visual-match.js';
@@ -171,7 +171,7 @@ export default async function buyCheckPriceRoutes(app) {
         if (slotId === null) {
           visual.note = 'The photo comparison was skipped: you have used all your lookups for this hour.';
         } else {
-          const result = await addVisualMatch(web, images);
+          const result = await addVisualMatch(web, images, market);
           visual = { used: result.ran, compared: result.compared, dropped: result.dropped, note: result.note };
           if (borrowed && !result.ran) await refundSlot(slotId);
         }
@@ -185,7 +185,7 @@ export default async function buyCheckPriceRoutes(app) {
         {
           price: body.price,
           ownSales,
-          usedPrices: web.used.listings.map((listing) => listing.price),
+          usedPrices: preferLocalListings(web.used.listings, market).map((listing) => listing.price),
           newPriceMedian: web.new_price?.median ?? null,
         },
         thresholds,

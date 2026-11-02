@@ -1,5 +1,6 @@
 import { config } from '../config.js';
 import { pool } from '../db.js';
+import { localHostPriority } from './markets.js';
 
 // ---------------------------------------------------------------------------
 // Settings. The search results only contain text, so the photo of each kept listing is found
@@ -194,12 +195,14 @@ async function compareAll(userImages, candidates) {
  * item move to `dropped`. Never throws: when anything fails, the text-only result stays as it is.
  * Returns whether a comparison really ran, and a note for the user.
  */
-export async function addVisualMatch(web, userImages) {
-  // Vinted listings come first, since that is where the item would be resold.
-  const byVintedFirst = [...web.used.listings].sort(
-    (a, b) => Number(b.site.includes('vinted.')) - Number(a.site.includes('vinted.')),
-  );
-  const candidates = byVintedFirst.slice(0, MAX_CANDIDATES);
+export async function addVisualMatch(web, userImages, market) {
+  // Local-country listings first (especially the user's Vinted), since that is where the item would be resold.
+  const byLocalFirst = [...web.used.listings].sort((a, b) => {
+    const local = localHostPriority(b.site, market) - localHostPriority(a.site, market);
+    if (local !== 0) return local;
+    return Number(b.site.includes('vinted.')) - Number(a.site.includes('vinted.'));
+  });
+  const candidates = byLocalFirst.slice(0, MAX_CANDIDATES);
   try {
     await mapLimit(candidates, FETCH_CONCURRENCY, async (listing) => {
       listing.image_url = await listingImage(listing.url);

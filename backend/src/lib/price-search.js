@@ -1,6 +1,6 @@
 import { config } from '../config.js';
 import { mentionsBrand } from './brand.js';
-import { convertAmount, ratesNote, searchesFor } from './markets.js';
+import { convertAmount, countryTld, localHostPriority, ratesNote, searchesFor } from './markets.js';
 import { median } from './stats.js';
 
 // ---------------------------------------------------------------------------
@@ -27,13 +27,46 @@ const MAX_OTHER_TEXT = 700;
 
 /** Search queries. {phrase} is the item's search phrase. Hungarian: "ár" = price, "használt eladó" = used, for sale. */
 /** Bump when the searches change, so results cached by an older version are not reused. */
-export const SEARCH_VERSION = 4;
+export const SEARCH_VERSION = 5;
 
 /** Hosts that sell second-hand or private ads: never a source of new prices. */
 const NOT_NEW_PRICE_HOSTS = ['vinted.', 'ebay.', 'facebook.', 'olx.', 'jofogas.', 'marketplace', 'aprohirdetes.', 'hardverapro.'];
-const MARKETPLACE_HOSTS = ['vinted.', 'jofogas.', 'olx.', 'ebay.', 'facebook.', 'marketplace'];
+const MARKETPLACE_HOSTS = [
+  'vinted.',
+  'jofogas.',
+  'olx.',
+  'ebay.',
+  'facebook.',
+  'marketplace',
+  'willhaben.',
+  'kleinanzeigen.',
+  'leboncoin.',
+  'marktplaats.',
+  'sbazar.',
+  'bazos.',
+  'wallapop.',
+  '2ememain.',
+  'subito.',
+  'gumtree.',
+  'njuskalo.',
+  'dba.dk',
+  'osta.ee',
+  'tori.fi',
+  'xe.gr',
+  'donedeal.',
+  'ss.lv',
+  'bolha.',
+  'blocket.',
+];
 
-const SYSTEM_PROMPT = `You read web search results to find prices for one clothing item that a second-hand reseller might buy. You are given the item and a numbered list of search results (id, title, site, link, text). Use ONLY these results.
+function localSites(market) {
+  return [market.vinted, market.extra].filter(Boolean).join(' and ');
+}
+
+function systemPrompt(market) {
+  const locals = localSites(market);
+  const tld = countryTld(market);
+  return `You read web search results to find prices for one clothing item that a second-hand reseller in ${market.country} might buy. You are given the item and a numbered list of search results (id, title, site, link, text). Use ONLY these results.
 
 Reply with ONLY one JSON object, no other text and no markdown:
 {
@@ -44,14 +77,15 @@ Reply with ONLY one JSON object, no other text and no markdown:
 
 Rules:
 - If the item has a brand, use ONLY results about that exact brand. Skip results about any other brand, even for a very similar item. For a second-hand listing of another brand, set "same_item" to false and "reason" to "different brand".
-- Prefer listings on the local Vinted and the country's marketplace: include every one of that brand and kind of item that has a price.
+- Search results are already ordered with ${market.country} sites first. Prefer ${locals} and other .${tld} listings for used prices. Include every local listing of that brand and kind of item that has a price. Use foreign Vinted sites and shops only when local results are missing or clearly do not cover the item.
 - "id" is the number of a search result. Never write links.
 - "price" is a number exactly as written in that result's text, in the currency shown there ("HUF" for Ft or forint, "EUR", "USD", "GBP", "PLN", ...). Prices look like "5.990 Ft", "12,99 €", "£15" — copy the number. Never invent, estimate or adjust a price, and never take it from a result that does not state it.
-- "new_price_sources": results from online shops that sell this item, or the closest equivalent, NEW, with its current price. One entry per shop. Skip second-hand sites and marketplaces, news, blogs and results without a clear price.
-- "used_listings": results that are second-hand or private listings (Vinted, Jofogas, eBay, Facebook Marketplace, other resale sites, or a shop's used section) for this kind of item, with an asking price. Include every such listing that has a price, not just a few. A result can be in only one of the two lists.
+- "new_price_sources": results from online shops that sell this item, or the closest equivalent, NEW, with its current price. Prefer shops in ${market.country}. One entry per shop. Skip second-hand sites and marketplaces, news, blogs and results without a clear price.
+- "used_listings": results that are second-hand or private listings (Vinted, Jofogas, eBay, Facebook Marketplace, other resale sites, or a shop's used section) for this kind of item, with an asking price. Put local ${market.country} listings first in the array. Include every such listing that has a price, not just a few. A result can be in only one of the two lists.
 - Set "same_item" to true for a useful price comparison: the same kind of garment from the same brand (the exact model is a plus, not required), a similar size range (one size away is fine), the adult version. Set it to false for the wrong kind of item, a clearly different size range, a kids' version, a bundle or lot of several items, "wanted" posts, accessories or parts, and give a short "reason" for every false. For true, "reason" is a few words on why it matches.
 - Use null for "size" or "condition" when the text does not say.
 - Use empty lists when nothing fits. "note" is one short sentence about anything the reseller should know (for example that few results were found), or null.`;
+}
 
 const RETRY_PROMPT = 'That was not a valid JSON object in the required format. Reply again with ONLY the JSON object.';
 
@@ -101,7 +135,7 @@ function hungarianNoun(item) {
   return null;
 }
 
-function queryPhrase(item) {
+function queryPhrase(item, market) {
   let phrase = plain(item.search_phrase);
   const brand = item.brand ? plain(item.brand) : '';
   if (brand && /^[\p{L}\p{N} ]+$/u.test(item.brand)) {
@@ -113,7 +147,7 @@ function queryPhrase(item) {
   if (colour && !phrase.toLowerCase().includes(colour.toLowerCase())) {
     phrase = `${phrase} ${colour}`.trim();
   }
-  const noun = hungarianNoun(item);
+  const noun = market?.country === 'HU' ? hungarianNoun(item) : null;
   if (noun && !phrase.toLowerCase().includes(noun.toLowerCase())) {
     phrase = `${phrase} ${noun}`.trim();
   }
@@ -121,10 +155,10 @@ function queryPhrase(item) {
 }
 
 /** Fills a query template, keeping operators (site:, -site:) inside the 128-character limit. */
-function fill(template, item) {
+function fill(template, item, market) {
   const extra = template.replace('{phrase}', '').trim();
   const budget = Math.max(16, 128 - (extra ? extra.length + 1 : 0));
-  const phrase = queryPhrase(item).slice(0, budget).trim();
+  const phrase = queryPhrase(item, market).slice(0, budget).trim();
   return (extra ? `${phrase} ${extra}` : phrase).slice(0, 128);
 }
 
@@ -204,21 +238,22 @@ function hostOf(url) {
   }
 }
 
-function isMarketplace(host) {
-  return MARKETPLACE_HOSTS.some((part) => host.includes(part));
+function isMarketplace(host, market) {
+  if (MARKETPLACE_HOSTS.some((part) => host.includes(part))) return true;
+  return Boolean(market?.extra && (host === market.extra || host.endsWith(`.${market.extra}`)));
 }
 
-function resultText(result) {
+function resultText(result, market) {
   const parts = [result.snippet, result.summary, result.content].filter(
     (part) => typeof part === 'string' && part.trim() !== '',
   );
   const host = typeof result?.url === 'string' ? hostOf(result.url) : '';
-  const limit = isMarketplace(host) ? MAX_MARKETPLACE_TEXT : MAX_OTHER_TEXT;
+  const limit = isMarketplace(host, market) ? MAX_MARKETPLACE_TEXT : MAX_OTHER_TEXT;
   return parts.join('\n').slice(0, limit);
 }
 
 /** Numbered results from all searches, without duplicate links or entries without a usable link. */
-function numberResults(...searches) {
+function numberResults(searches, market) {
   const list = [];
   const seen = new Set();
   for (const results of searches) {
@@ -231,12 +266,16 @@ function numberResults(...searches) {
         title: String(result.title ?? '').slice(0, 200),
         url: result.url,
         host,
-        text: resultText(result),
+        text: resultText(result, market),
+        local: localHostPriority(host, market),
+        marketplace: isMarketplace(host, market),
         rerank: typeof result.rerank_score === 'number' ? result.rerank_score : 0,
       });
     }
   }
-  list.sort((a, b) => Number(isMarketplace(b.host)) - Number(isMarketplace(a.host)) || b.rerank - a.rerank);
+  list.sort(
+    (a, b) => b.local - a.local || Number(b.marketplace) - Number(a.marketplace) || b.rerank - a.rerank,
+  );
   return list.slice(0, MAX_RESULTS_FOR_MODEL).map((result, index) => ({
     id: index + 1,
     title: result.title,
@@ -259,9 +298,9 @@ function itemDescription(item) {
   return parts.filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n');
 }
 
-function userMessage(item, results) {
+function userMessage(item, results, market) {
   const shown = results.map(({ id, title, host, url, text }) => ({ id, title, site: host, link: url, text }));
-  return `Item:\n${itemDescription(item)}\n\nSearch results:\n${JSON.stringify(shown)}`;
+  return `The reseller is in ${market.country}. Prefer search results from ${localSites(market)} and other .${countryTld(market)} sites.\n\nItem:\n${itemDescription(item)}\n\nSearch results:\n${JSON.stringify(shown)}`;
 }
 
 // --- Checking what the model said -------------------------------------------
@@ -308,7 +347,11 @@ function extractListedAmounts(text) {
     { currency: 'PLN', re: /(\d{1,3}(?:[.\s ]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:zł|zl|PLN)/gi },
     { currency: 'CZK', re: /(\d{1,3}(?:[.\s ]\d{3})+|\d{3,7})\s*(?:Kč|Kc|CZK)/gi },
     { currency: 'RON', re: /(\d{1,3}(?:[.\s ]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:lei|RON)/gi },
-    { currency: 'USD', re: /(?:\$|USD)\s*(\d{1,3}(?:[,\s ]\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/gi },
+    { currency: 'AUD', re: /(?:A\$|AU\$|AUD)\s*(\d{1,3}(?:[,\s ]\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/gi },
+    { currency: 'AUD', re: /(\d{1,3}(?:[,\s ]\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*(?:A\$|AU\$|AUD)/gi },
+    { currency: 'DKK', re: /(\d{1,3}(?:[.\s ]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:DKK|Dkr|dkr)/gi },
+    { currency: 'SEK', re: /(\d{1,3}(?:[.\s ]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:SEK|sek)/gi },
+    { currency: 'USD', re: /(?:(?<!A)\$|USD)\s*(\d{1,3}(?:[,\s ]\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/gi },
   ];
   for (const { currency, re } of patterns) {
     for (const match of text.matchAll(re)) {
@@ -379,7 +422,7 @@ function assemble(reply, results, item, market) {
   // Marketplace hits already came from a branded query (`"Zara" … site:vinted.hu`), so the
   // snippet often omits the brand even when the listing is for that brand.
   const wrongBrand = (result) =>
-    Boolean(item.brand) && !mentionsBrand(textOf(result), item.brand) && !isMarketplace(result.host);
+    Boolean(item.brand) && !mentionsBrand(textOf(result), item.brand) && !isMarketplace(result.host, market);
   let converted = false;
 
   const sources = [];
@@ -442,7 +485,7 @@ function assemble(reply, results, item, market) {
   ]);
   for (const result of results) {
     if (claimed.has(result.id) || usedAsNew.has(result.id) || seenListings.has(result.id)) continue;
-    if (!isMarketplace(result.host)) continue;
+    if (!isMarketplace(result.host, market)) continue;
     if (item.brand && !mentionsBrand(textOf(result), item.brand)) continue;
     const confirmed = confirmedAmount(textOf(result), null);
     const price = confirmed
@@ -460,6 +503,9 @@ function assemble(reply, results, item, market) {
       reason: 'Taken from the listing snippet.',
     });
   }
+
+  listings.sort((a, b) => localHostPriority(b.site, market) - localHostPriority(a.site, market));
+  sources.sort((a, b) => localHostPriority(hostOf(b.url), market) - localHostPriority(hostOf(a.url), market));
 
   const prices = sources.map((source) => source.price);
   return {
@@ -492,13 +538,16 @@ export async function searchPrices(item, market) {
   const planned = searchesFor(market);
   const searches = await Promise.allSettled(
     planned.map((search) =>
-      callSearch(fill(search.template, item), { needContent: search.needContent, oriQuestion: market.ori }),
+      callSearch(fill(search.template, item, market), { needContent: search.needContent, oriQuestion: market.ori }),
     ),
   );
   const failures = searches.filter((search) => search.status === 'rejected');
   if (failures.length === searches.length) throw failures[0].reason;
 
-  const results = numberResults(...searches.map((search) => (search.status === 'fulfilled' ? search.value : [])));
+  const results = numberResults(
+    searches.map((search) => (search.status === 'fulfilled' ? search.value : [])),
+    market,
+  );
   const partialNote =
     failures.length > 0 ? 'One of the searches failed, so the result may be incomplete.' : null;
 
@@ -518,8 +567,8 @@ export async function searchPrices(item, market) {
   }
 
   const messages = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: userMessage(item, results) },
+    { role: 'system', content: systemPrompt(market) },
+    { role: 'user', content: userMessage(item, results, market) },
   ];
   let reply = await callModel(messages);
   usage.prompt_tokens += reply.usage.prompt_tokens;

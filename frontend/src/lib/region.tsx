@@ -3,15 +3,21 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { readPreference, writePreference } from '@/lib/preferences';
 
 export const COUNTRY_CODES = [
-  'HU',
+  'AU',
   'AT',
   'BE',
+  'HR',
   'CZ',
-  'DE',
-  'ES',
+  'DK',
+  'EE',
+  'FI',
   'FR',
-  'GB',
+  'DE',
+  'GR',
+  'HU',
+  'IE',
   'IT',
+  'LV',
   'LT',
   'LU',
   'NL',
@@ -19,9 +25,14 @@ export const COUNTRY_CODES = [
   'PT',
   'RO',
   'SK',
+  'SI',
+  'ES',
+  'SE',
+  'GB',
+  'US',
 ] as const;
 
-export const CURRENCY_CODES = ['HUF', 'EUR', 'USD', 'GBP', 'PLN', 'CZK', 'RON', 'CHF'] as const;
+export const CURRENCY_CODES = ['HUF', 'EUR', 'USD', 'GBP', 'PLN', 'CZK', 'RON', 'CHF', 'AUD', 'DKK', 'SEK'] as const;
 
 export type CountryCode = (typeof COUNTRY_CODES)[number];
 export type CurrencyCode = (typeof CURRENCY_CODES)[number];
@@ -41,15 +52,21 @@ export type CurrencyInfo = {
 };
 
 export const COUNTRIES: Record<CountryCode, CountryInfo> = {
-  HU: { code: 'HU', currency: 'HUF', vintedHost: 'www.vinted.hu' },
+  AU: { code: 'AU', currency: 'AUD', vintedHost: 'www.vinted.com.au' },
   AT: { code: 'AT', currency: 'EUR', vintedHost: 'www.vinted.at' },
   BE: { code: 'BE', currency: 'EUR', vintedHost: 'www.vinted.be' },
+  HR: { code: 'HR', currency: 'EUR', vintedHost: 'www.vinted.hr' },
   CZ: { code: 'CZ', currency: 'CZK', vintedHost: 'www.vinted.cz' },
-  DE: { code: 'DE', currency: 'EUR', vintedHost: 'www.vinted.de' },
-  ES: { code: 'ES', currency: 'EUR', vintedHost: 'www.vinted.es' },
+  DK: { code: 'DK', currency: 'DKK', vintedHost: 'www.vinted.dk' },
+  EE: { code: 'EE', currency: 'EUR', vintedHost: 'www.vinted.ee' },
+  FI: { code: 'FI', currency: 'EUR', vintedHost: 'www.vinted.fi' },
   FR: { code: 'FR', currency: 'EUR', vintedHost: 'www.vinted.fr' },
-  GB: { code: 'GB', currency: 'GBP', vintedHost: 'www.vinted.co.uk' },
+  DE: { code: 'DE', currency: 'EUR', vintedHost: 'www.vinted.de' },
+  GR: { code: 'GR', currency: 'EUR', vintedHost: 'www.vinted.gr' },
+  HU: { code: 'HU', currency: 'HUF', vintedHost: 'www.vinted.hu' },
+  IE: { code: 'IE', currency: 'EUR', vintedHost: 'www.vinted.ie' },
   IT: { code: 'IT', currency: 'EUR', vintedHost: 'www.vinted.it' },
+  LV: { code: 'LV', currency: 'EUR', vintedHost: 'www.vinted.lv' },
   LT: { code: 'LT', currency: 'EUR', vintedHost: 'www.vinted.lt' },
   LU: { code: 'LU', currency: 'EUR', vintedHost: 'www.vinted.lu' },
   NL: { code: 'NL', currency: 'EUR', vintedHost: 'www.vinted.nl' },
@@ -57,6 +74,11 @@ export const COUNTRIES: Record<CountryCode, CountryInfo> = {
   PT: { code: 'PT', currency: 'EUR', vintedHost: 'www.vinted.pt' },
   RO: { code: 'RO', currency: 'RON', vintedHost: 'www.vinted.ro' },
   SK: { code: 'SK', currency: 'EUR', vintedHost: 'www.vinted.sk' },
+  SI: { code: 'SI', currency: 'EUR', vintedHost: 'www.vinted.si' },
+  ES: { code: 'ES', currency: 'EUR', vintedHost: 'www.vinted.es' },
+  SE: { code: 'SE', currency: 'SEK', vintedHost: 'www.vinted.se' },
+  GB: { code: 'GB', currency: 'GBP', vintedHost: 'www.vinted.co.uk' },
+  US: { code: 'US', currency: 'USD', vintedHost: 'www.vinted.com' },
 };
 
 export const CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
@@ -68,6 +90,9 @@ export const CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
   CZK: { code: 'CZK', symbol: 'Kč', aliases: ['czk', 'kc'] },
   RON: { code: 'RON', symbol: 'lei', aliases: ['ron', 'leu'] },
   CHF: { code: 'CHF', symbol: 'CHF', aliases: ['chf', 'fr'] },
+  AUD: { code: 'AUD', symbol: 'A$', aliases: ['aud', 'a$'] },
+  DKK: { code: 'DKK', symbol: 'kr', aliases: ['dkk', 'dkr'] },
+  SEK: { code: 'SEK', symbol: 'kr', aliases: ['sek'] },
 };
 
 export const DEFAULT_COUNTRY: CountryCode = 'HU';
