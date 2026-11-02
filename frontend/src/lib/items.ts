@@ -1,6 +1,7 @@
 import { randomUUID } from 'expo-crypto';
 
 import { api, API_URL } from '@/lib/api';
+import type { Translator } from '@/lib/i18n';
 import { vintedCategoryById, type ItemVintedCategory } from '@/lib/item-vinted-categories';
 import type {
   Item,
@@ -88,14 +89,18 @@ export type ItemSort =
 
 export const DEFAULT_ITEM_SORT: ItemSort = 'status_changed_desc';
 
-export const ITEM_SORT_OPTIONS: { value: ItemSort; label: string }[] = [
-  { value: 'status_changed_desc', label: 'Status change (newest)' },
-  { value: 'status_changed_asc', label: 'Status change (oldest)' },
-  { value: 'name_asc', label: 'Name (A–Z)' },
-  { value: 'name_desc', label: 'Name (Z–A)' },
-  { value: 'price_desc', label: 'Price (high → low)' },
-  { value: 'price_asc', label: 'Price (low → high)' },
+const ITEM_SORT_KEYS: ItemSort[] = [
+  'status_changed_desc',
+  'status_changed_asc',
+  'name_asc',
+  'name_desc',
+  'price_desc',
+  'price_asc',
 ];
+
+export function itemSortOptions(t: Translator): { value: ItemSort; label: string }[] {
+  return ITEM_SORT_KEYS.map((value) => ({ value, label: t(`sort.${value}`) }));
+}
 
 /** Listed tab: bundle price, then listed, then cost. Sold tab: sold price. */
 function sortPrice(item: Item, context: 'listed' | 'sold'): number | null {

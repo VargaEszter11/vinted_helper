@@ -13,6 +13,7 @@ import {
   splitEvenly,
   todayIso,
 } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { markItemSold, newItemId, sellItemsAsBundle } from '@/lib/items';
 import type { Item } from '@/lib/types';
 
@@ -32,6 +33,7 @@ export function MarkSoldModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [soldFor, setSoldFor] = useState(priceToInput(item.listed_for));
   const [soldDate, setSoldDate] = useState(todayIso());
   const [asBundle, setAsBundle] = useState(false);
@@ -47,11 +49,12 @@ export function MarkSoldModal({
   const shares = asBundle && price.value !== null ? splitEvenly(price.value, itemCount) : null;
   const sharesHint =
     shares && bundledIds.length > 0
-      ? `Each item: ${
-          shares[0] === shares[shares.length - 1]
-            ? formatHuf(shares[0])
-            : `${formatHuf(shares[shares.length - 1])}–${formatHuf(shares[0])}`
-        }`
+      ? t('soldModal.eachItem', {
+          price:
+            shares[0] === shares[shares.length - 1]
+              ? formatHuf(shares[0])
+              : `${formatHuf(shares[shares.length - 1])}–${formatHuf(shares[0])}`,
+        })
       : undefined;
 
   /** Updates a field and clears its error as soon as the user edits it. */
@@ -70,9 +73,9 @@ export function MarkSoldModal({
   async function handleSave() {
     const next: typeof errors = {};
     if (price.error) next.soldFor = price.error;
-    else if (price.value === null) next.soldFor = 'Sold for is required';
-    if (!isValidIsoDate(soldDate.trim())) next.soldDate = 'Use the format YYYY-MM-DD';
-    if (asBundle && bundledIds.length === 0) next.items = 'Tick the other items in the bundle';
+    else if (price.value === null) next.soldFor = t('itemForm.soldForRequired');
+    if (!isValidIsoDate(soldDate.trim())) next.soldDate = t('itemForm.dateFormat');
+    if (asBundle && bundledIds.length === 0) next.items = t('soldModal.needOthers');
     setErrors(next);
     if (Object.keys(next).length > 0 || price.value === null) return;
 
@@ -93,24 +96,24 @@ export function MarkSoldModal({
 
   return (
     <ModalSheet
-      title="Mark as sold"
+      title={t('soldModal.title')}
       onClose={onClose}
       footer={
         <>
           <View className="flex-1" />
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title="Mark as sold" onPress={handleSave} loading={saving} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={t('soldModal.confirm')} onPress={handleSave} loading={saving} />
         </>
       }>
       {formError ? <ErrorBanner message={formError} /> : null}
       <View className="gap-0.5">
         <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{item.name}</Text>
-        <Text className="text-sm text-slate-500 dark:text-slate-400">Bought for {formatHuf(item.bought_for)}</Text>
+        <Text className="text-sm text-slate-500 dark:text-slate-400">{t('soldModal.boughtFor', { price: formatHuf(item.bought_for) })}</Text>
       </View>
 
       {otherItems.length > 0 ? (
         <CheckRow
-          label="Sold in a bundle with other items"
+          label={t('soldModal.asBundle')}
           checked={asBundle}
           onPress={() => setAsBundle(!asBundle)}
           disabled={saving}
@@ -119,13 +122,13 @@ export function MarkSoldModal({
 
       {asBundle ? (
         <View className="gap-1">
-          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Other items in the bundle</Text>
+          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('soldModal.otherItems')}</Text>
           <View className="rounded-lg border border-slate-200 dark:border-slate-700">
             {otherItems.map((other) => (
               <CheckRow
                 key={other.id}
                 label={other.name}
-                detail={`bought ${formatHuf(other.bought_for)}`}
+                detail={t('soldModal.bought', { price: formatHuf(other.bought_for) })}
                 checked={bundledIds.includes(other.id)}
                 onPress={() => toggleBundled(other.id)}
                 disabled={saving}
@@ -139,7 +142,7 @@ export function MarkSoldModal({
 
       <View className="flex-row gap-3">
         <PriceField
-          label={asBundle ? 'Bundle sold for (Ft)' : 'Sold for (Ft)'}
+          label={asBundle ? t('soldModal.bundleSoldFor') : t('itemForm.soldFor')}
           value={soldFor}
           onChangeText={edit(setSoldFor, 'soldFor')}
           hint={sharesHint}
@@ -149,10 +152,10 @@ export function MarkSoldModal({
           className="flex-1"
         />
         <Field
-          label="Sold date"
+          label={t('itemForm.soldDate')}
           value={soldDate}
           onChangeText={edit(setSoldDate, 'soldDate')}
-          placeholder="YYYY-MM-DD"
+          placeholder={t('itemForm.datePlaceholder')}
           error={errors.soldDate}
           editable={!saving}
           className="flex-1"

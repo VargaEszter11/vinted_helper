@@ -1,3 +1,4 @@
+import { getT } from '@/lib/i18n';
 import { readToken, writeToken } from '@/lib/token-storage';
 
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
@@ -60,13 +61,13 @@ export async function api<T = unknown>(
           : undefined,
     });
   } catch {
-    throw new Error('Could not reach the server. Check your connection.');
+    throw new Error(getT()('error.offline'));
   }
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     if (response.status === 401 && token) setToken(null);
-    throw new ApiError(data?.message ?? `Request failed (${response.status}).`, response.status);
+    throw new ApiError(data?.message ?? getT()('error.requestFailed', { status: response.status }), response.status);
   }
   return (await response.json()) as T;
 }

@@ -8,7 +8,6 @@ import {
   BRAND_COLOR,
   Button,
   CenteredSpinner,
-  CONDITION_OPTIONS,
   EmptyState,
   ErrorBanner,
   ErrorState,
@@ -17,15 +16,17 @@ import {
   Money,
   SearchField,
   profitColor,
+  useConditionOptions,
   useWideLayout,
 } from '@/components/ui';
 import { useItemList } from '@/hooks/use-item-list';
-import { formatHuf, formatItemCount } from '@/lib/format';
+import { formatHuf, formatItemCount, formatVisibleOf } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { vintedCategoryById } from '@/lib/item-vinted-categories';
 import {
   DEFAULT_ITEM_SORT,
   filterOptions,
-  ITEM_SORT_OPTIONS,
+  itemSortOptions,
   itemMatchesFilters,
   itemMatchesQuery,
   NO_FILTERS,
@@ -40,6 +41,8 @@ const SOLD: ItemStatus[] = ['sold'];
 const profitOf = (item: Item) => (item.sold_for ?? 0) - item.bought_for;
 
 export default function SoldScreen() {
+  const t = useT();
+  const conditionOptions = useConditionOptions();
   const { items, thumbnailFor, loading, refreshing, error, reload, refresh, retry } = useItemList(
     SOLD,
     'sold_date',
@@ -87,7 +90,7 @@ export default function SoldScreen() {
           <View className="flex-row flex-wrap items-center gap-2">
             {brands.length > 0 ? (
               <FilterSelect
-                label="Brand"
+                label={t('filter.brand')}
                 options={brands.map((brand) => ({ value: brand, label: brand }))}
                 value={filters.brand}
                 onChange={(brand) => setFilters((current) => ({ ...current, brand }))}
@@ -95,15 +98,15 @@ export default function SoldScreen() {
             ) : null}
             {sizes.length > 0 ? (
               <FilterSelect
-                label="Size"
+                label={t('filter.size')}
                 options={sizes.map((size) => ({ value: size, label: size }))}
                 value={filters.size}
                 onChange={(size) => setFilters((current) => ({ ...current, size }))}
               />
             ) : null}
             <FilterSelect
-              label="Condition"
-              options={CONDITION_OPTIONS}
+              label={t('filter.condition')}
+              options={conditionOptions}
               value={filters.condition}
               onChange={(condition) => setFilters((current) => ({ ...current, condition }))}
             />
@@ -113,16 +116,16 @@ export default function SoldScreen() {
               onChange={(category) => setFilters((current) => ({ ...current, category }))}
             />
             <FilterSelect
-              label="Sort"
+              label={t('filter.sort')}
               clearable={false}
               keepButtonLabel
               defaultValue={DEFAULT_ITEM_SORT}
-              options={ITEM_SORT_OPTIONS}
+              options={itemSortOptions(t)}
               value={sortBy}
               onChange={(next) => next && setSortBy(next)}
             />
             {filtering ? (
-              <Button title="Clear filters" variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
+              <Button title={t('filter.clear')} variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
             ) : null}
           </View>
         </View>
@@ -135,11 +138,11 @@ export default function SoldScreen() {
 
         <View className={`flex-row items-center border-b border-slate-200 py-2 dark:border-slate-800 ${rowClass}`}>
           <View style={{ width: thumbSize }} />
-          <HeaderText className="flex-1">Name</HeaderText>
-          <HeaderText className={`text-right ${moneyClass}`}>Bought</HeaderText>
-          <HeaderText className={`text-right ${moneyClass}`}>Sold for</HeaderText>
-          {wide ? <HeaderText className="w-28 text-right">Sold date</HeaderText> : null}
-          <HeaderText className={`text-right ${moneyClass}`}>Profit</HeaderText>
+          <HeaderText className="flex-1">{t('items.colName')}</HeaderText>
+          <HeaderText className={`text-right ${moneyClass}`}>{t('items.colBought')}</HeaderText>
+          <HeaderText className={`text-right ${moneyClass}`}>{t('sold.colSoldFor')}</HeaderText>
+          {wide ? <HeaderText className="w-28 text-right">{t('sold.colSoldDate')}</HeaderText> : null}
+          <HeaderText className={`text-right ${moneyClass}`}>{t('sold.colProfit')}</HeaderText>
         </View>
 
         {loading ? (
@@ -155,11 +158,9 @@ export default function SoldScreen() {
             }
             ListEmptyComponent={
               items.length === 0 ? (
-                <EmptyState title="Nothing sold yet">
-                  Items you mark as sold show up here.
-                </EmptyState>
+                <EmptyState title={t('sold.emptyTitle')}>{t('sold.emptyBody')}</EmptyState>
               ) : (
-                <EmptyState title="No items match your search" />
+                <EmptyState title={t('items.noSearch')} />
               )
             }
             renderItem={({ item }) => {
@@ -176,7 +177,7 @@ export default function SoldScreen() {
                     </Text>
                     {wide ? null : <Text className="text-xs text-slate-500 dark:text-slate-400">{item.sold_date}</Text>}
                     {item.bundle_id ? (
-                      <Text className="text-xs font-medium text-teal-700 dark:text-teal-300">Sold in a bundle</Text>
+                      <Text className="text-xs font-medium text-teal-700 dark:text-teal-300">{t('sold.inBundle')}</Text>
                     ) : null}
                   </View>
                   <Money value={item.bought_for} className={moneyClass} />
@@ -199,10 +200,10 @@ export default function SoldScreen() {
           <View
             className={`flex-row items-center justify-between border-t border-slate-200 bg-white py-3 dark:border-slate-800 dark:bg-slate-900 ${rowClass}`}>
             <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              {searching || filtering ? 'Profit' : 'Total profit'}
+              {searching || filtering ? t('sold.profit') : t('sold.totalProfit')}
               <Text className="text-sm font-normal text-slate-500 dark:text-slate-400">
                 {searching || filtering
-                  ? `  ·  ${visibleItems.length} of ${formatItemCount(items.length)}`
+                  ? `  ·  ${formatVisibleOf(visibleItems.length, items.length)}`
                   : `  ·  ${formatItemCount(items.length)}`}
               </Text>
             </Text>

@@ -13,6 +13,7 @@ import {
   splitEvenly,
   todayIso,
 } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { markBundleSold } from '@/lib/items';
 import type { Item } from '@/lib/types';
 
@@ -28,6 +29,7 @@ export function MarkBundleSoldModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [soldFor, setSoldFor] = useState(priceToInput(items[0]?.bundle_listed_for));
   const [soldDate, setSoldDate] = useState(todayIso());
   const [errors, setErrors] = useState<{ soldFor?: string; soldDate?: string }>({});
@@ -52,8 +54,8 @@ export function MarkBundleSoldModal({
   async function handleSave() {
     const next: typeof errors = {};
     if (price.error) next.soldFor = price.error;
-    else if (price.value === null) next.soldFor = 'Sold for is required';
-    if (!isValidIsoDate(soldDate.trim())) next.soldDate = 'Use the format YYYY-MM-DD';
+    else if (price.value === null) next.soldFor = t('itemForm.soldForRequired');
+    if (!isValidIsoDate(soldDate.trim())) next.soldDate = t('itemForm.dateFormat');
     setErrors(next);
     if (Object.keys(next).length > 0 || price.value === null) return;
 
@@ -70,19 +72,19 @@ export function MarkBundleSoldModal({
 
   return (
     <ModalSheet
-      title="Mark bundle as sold"
+      title={t('soldModal.bundleTitle', { count: formatItemCount(items.length) })}
       onClose={onClose}
       footer={
         <>
           <View className="flex-1" />
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={saving} />
-          <Button title="Mark as sold" onPress={handleSave} loading={saving} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={saving} />
+          <Button title={t('soldModal.confirm')} onPress={handleSave} loading={saving} />
         </>
       }>
       {formError ? <ErrorBanner message={formError} /> : null}
       <View className="gap-0.5">
         <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          Bundle of {formatItemCount(items.length)}
+          {t('soldModal.bundleTitle', { count: formatItemCount(items.length) })}
         </Text>
         <Text className="text-sm text-slate-500 dark:text-slate-400" numberOfLines={2}>
           {items.map((item) => item.name).join(', ')}
@@ -90,20 +92,20 @@ export function MarkBundleSoldModal({
       </View>
       <View className="flex-row gap-3">
         <PriceField
-          label="Sold for (Ft)"
+          label={t('itemForm.soldFor')}
           value={soldFor}
           onChangeText={edit(setSoldFor, 'soldFor')}
-          hint={sharesText ? `Each item: ${sharesText}` : undefined}
+          hint={sharesText ? t('soldModal.eachItem', { price: sharesText }) : undefined}
           error={errors.soldFor}
           editable={!saving}
           autoFocus
           className="flex-1"
         />
         <Field
-          label="Sold date"
+          label={t('itemForm.soldDate')}
           value={soldDate}
           onChangeText={edit(setSoldDate, 'soldDate')}
-          placeholder="YYYY-MM-DD"
+          placeholder={t('itemForm.datePlaceholder')}
           error={errors.soldDate}
           editable={!saving}
           className="flex-1"

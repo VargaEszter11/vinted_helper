@@ -15,8 +15,10 @@ import { setToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { confirmAsync } from '@/lib/confirm';
 import { errorMessage } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 
 export default function AdminScreen() {
+  const t = useT();
   const { isAdmin } = useAuth();
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [busy, setBusy] = useState<'exporting' | 'importing' | null>(null);
@@ -33,7 +35,7 @@ export default function AdminScreen() {
   );
 
   if (!isAdmin) {
-    return <EmptyState title="Admins only" />;
+    return <EmptyState title={t('admin.only')} />;
   }
 
   async function handleExport() {
@@ -53,9 +55,9 @@ export default function AdminScreen() {
     const file = await pickExportFile();
     if (!file) return;
     const confirmed = await confirmAsync(
-      'Replace everything?',
-      `All items, photos and accounts on this server will be deleted and replaced with the contents of “${file.name}”. This cannot be undone. You will have to sign in again.`,
-      'Replace',
+      t('admin.replaceTitle'),
+      t('admin.replaceBody', { name: file.name }),
+      t('admin.replace'),
     );
     if (!confirmed) return;
 
@@ -72,12 +74,16 @@ export default function AdminScreen() {
   if (imported) {
     return (
       <View className="flex-1 items-center justify-center gap-3 bg-slate-50 p-6 dark:bg-slate-950">
-        <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">Import finished</Text>
+        <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('admin.importFinished')}</Text>
         <Text className="max-w-md text-center text-sm text-slate-600 dark:text-slate-300">
-          Imported {imported.users} accounts, {imported.items} items, {imported.bundles} bundles and{' '}
-          {imported.photos} photos. Accounts and passwords now come from the file, so sign in again.
+          {t('admin.importSummary', {
+            users: imported.users,
+            items: imported.items,
+            bundles: imported.bundles,
+            photos: imported.photos,
+          })}
         </Text>
-        <Button title="Sign in again" onPress={() => setToken(null)} />
+        <Button title={t('admin.signInAgain')} onPress={() => setToken(null)} />
       </View>
     );
   }
@@ -89,16 +95,20 @@ export default function AdminScreen() {
 
         {stats ? (
           <Text className="text-sm text-slate-600 dark:text-slate-300">
-            This server has {stats.users} accounts, {stats.items} items, {stats.bundles} bundles and{' '}
-            {stats.photos} photos.
+            {t('admin.stats', {
+              users: stats.users,
+              items: stats.items,
+              bundles: stats.bundles,
+              photos: stats.photos,
+            })}
           </Text>
         ) : !error ? (
           <CenteredSpinner />
         ) : null}
 
-        <Card title="Export" description="Download everything (accounts, items, bundles, status history and photos) as one file. Use it as a backup, or to move your data to another server.">
+        <Card title={t('admin.exportTitle')} description={t('admin.exportBody')}>
           <Button
-            title="Download export"
+            title={t('admin.download')}
             icon="download-outline"
             onPress={handleExport}
             loading={busy === 'exporting'}
@@ -107,10 +117,10 @@ export default function AdminScreen() {
           />
         </Card>
 
-        <Card title="Import" description="Replace everything on this server with an export file. The current accounts, items and photos are deleted first, and nothing is changed if the file turns out to be invalid.">
+        <Card title={t('admin.importTitle')} description={t('admin.importBody')}>
           {Platform.OS === 'web' ? (
             <Button
-              title={busy === 'importing' ? 'Importing…' : 'Choose export file…'}
+              title={busy === 'importing' ? t('admin.importing') : t('admin.chooseFile')}
               icon="cloud-upload-outline"
               variant="danger"
               onPress={handleImport}
@@ -120,7 +130,7 @@ export default function AdminScreen() {
             />
           ) : (
             <Text className="text-sm text-slate-500 dark:text-slate-400">
-              Importing needs a file picker, so open the web version of the app to do it.
+              {t('admin.importWebOnly')}
             </Text>
           )}
         </Card>

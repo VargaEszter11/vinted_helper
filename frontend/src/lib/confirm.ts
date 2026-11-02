@@ -1,5 +1,7 @@
 import { Alert, Platform } from 'react-native';
 
+import { getT } from '@/lib/i18n';
+
 export type ConfirmRequest = {
   title: string;
   message: string;
@@ -32,7 +34,7 @@ export function confirmAsync(title: string, message: string, confirmLabel: strin
       title,
       message,
       [
-        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: getT()('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
         { text: confirmLabel, style: 'destructive', onPress: () => resolve(true) },
       ],
       { cancelable: true, onDismiss: () => resolve(false) },

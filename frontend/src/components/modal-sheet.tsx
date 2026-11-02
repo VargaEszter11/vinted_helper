@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useT } from '@/lib/i18n';
+
 /** A popup: a bottom sheet on phones, a centered dialog on wider screens. */
 export function ModalSheet({
   title,
@@ -15,6 +17,7 @@ export function ModalSheet({
   footer?: ReactNode;
   children: ReactNode;
 }) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   return (
     <Modal transparent animationType="fade" visible onRequestClose={onClose}>
@@ -32,7 +35,7 @@ export function ModalSheet({
               <Pressable
                 onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel="Close"
+                accessibilityLabel={t('common.close')}
                 className="rounded-full p-2 active:bg-slate-100 dark:active:bg-slate-800">
                 <Ionicons name="close" size={22} color="#94a3b8" />
               </Pressable>

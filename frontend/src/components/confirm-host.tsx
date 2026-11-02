@@ -3,12 +3,14 @@ import { Modal, Platform, Pressable, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui';
 import { registerConfirmHost, type ConfirmRequest } from '@/lib/confirm';
+import { useT } from '@/lib/i18n';
 
 /**
  * Draws the confirm dialog requested through confirmAsync() on web. Mount it once at the root.
  * It is rendered only while open, so it stacks above any popup that asked for it.
  */
 export function ConfirmHost() {
+  const t = useT();
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
 
   useEffect(
@@ -48,7 +50,7 @@ export function ConfirmHost() {
       <View className="flex-1 items-center justify-center p-6">
         <Pressable
           onPress={() => answer(false)}
-          accessibilityLabel="Cancel"
+          accessibilityLabel={t('common.cancel')}
           className="absolute inset-0 bg-black/40"
         />
         <View
@@ -57,7 +59,7 @@ export function ConfirmHost() {
           <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">{request.title}</Text>
           <Text className="text-sm text-slate-600 dark:text-slate-300">{request.message}</Text>
           <View className="mt-3 flex-row justify-end gap-2">
-            <Button title="Cancel" variant="secondary" onPress={() => answer(false)} />
+            <Button title={t('common.cancel')} variant="secondary" onPress={() => answer(false)} />
             <Button title={request.confirmLabel} variant="danger" onPress={() => answer(true)} />
           </View>
         </View>

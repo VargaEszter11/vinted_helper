@@ -1,6 +1,7 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
+import { getT } from '@/lib/i18n';
 import type { LocalPhoto } from '@/lib/types';
 
 const MAX_PHOTO_WIDTH = 1600;
@@ -18,7 +19,7 @@ export async function pickPhotos(
   if (source === 'camera') {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      throw new Error('Camera access is needed to take photos. You can allow it in Settings.');
+      throw new Error(getT()('photos.cameraDenied'));
     }
     result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
   } else {
@@ -44,6 +45,6 @@ async function resizePhoto(uri: string, maxWidth: number): Promise<LocalPhoto> {
     compress: JPEG_QUALITY,
     base64: true,
   });
-  if (!saved.base64) throw new Error('Could not read the photo.');
+  if (!saved.base64) throw new Error(getT()('photos.readFailed'));
   return { key: saved.uri, uri: saved.uri, base64: saved.base64 };
 }

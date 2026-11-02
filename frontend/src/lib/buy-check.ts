@@ -131,7 +131,12 @@ export type PricesResult = {
   verdict: {
     verdict: Verdict | 'LOW_CONFIDENCE';
     leaning: Verdict | null;
-    estimate: { source: 'own_sales' | 'used_asking' | 'new_price'; value: number; data_points: number } | null;
+    estimate: {
+      source: 'own_sales' | 'used_asking' | 'new_price';
+      value: number;
+      data_points: number;
+      basis?: number;
+    } | null;
     margin: number | null;
     margin_percent: number | null;
     explanation: string;

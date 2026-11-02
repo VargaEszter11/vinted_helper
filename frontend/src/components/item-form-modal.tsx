@@ -6,14 +6,14 @@ import { PhotoPicker } from '@/components/photo-picker';
 import {
   BRAND_COLOR,
   Button,
-  CONDITION_OPTIONS,
   Chips,
   ErrorBanner,
   Field,
   PriceField,
   Segmented,
-  STATUS_LABELS,
+  STATUS_VALUES,
   StatusBadge,
+  useConditionOptions,
 } from '@/components/ui';
 import { confirmAsync } from '@/lib/confirm';
 import {
@@ -26,6 +26,7 @@ import {
   todayIso,
 } from '@/lib/format';
 import { CategoryPicker } from '@/components/category-picker';
+import { useT } from '@/lib/i18n';
 import { deleteItem, fetchStatusHistory, newItemId, saveItem, suggestItemCategory } from '@/lib/items';
 import type {
   Item,
@@ -38,10 +39,6 @@ import type {
   StatusChange,
 } from '@/lib/types';
 
-const STATUS_OPTIONS = (['in_stock', 'listed', 'sold'] as const).map((value) => ({
-  value,
-  label: STATUS_LABELS[value],
-}));
 
 const MULTILINE_STYLE = { minHeight: 72, textAlignVertical: 'top' } as const;
 const AUTO_SUGGEST_MS = 900;
@@ -61,6 +58,9 @@ export function ItemFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
+  const conditionOptions = useConditionOptions();
+  const statusOptions = STATUS_VALUES.map((value) => ({ value, label: t(`status.${value}`) }));
   const [itemId] = useState(() => item?.id ?? newItemId());
   const [name, setName] = useState(item?.name ?? '');
   const [boughtFor, setBoughtFor] = useState(priceToInput(item?.bought_for));
@@ -115,14 +115,14 @@ export function ItemFormModal({
     const listed = parsePrice(listedFor);
     const sold = parsePrice(soldFor);
 
-    if (name.trim() === '') next.name = 'Name is required';
+    if (name.trim() === '') next.name = t('itemForm.nameRequired');
     if (bought.error) next.boughtFor = bought.error;
-    else if (bought.value === null) next.boughtFor = 'Bought for is required';
+    else if (bought.value === null) next.boughtFor = t('itemForm.boughtRequired');
     if (listed.error) next.listedFor = listed.error;
     if (status === 'sold') {
       if (sold.error) next.soldFor = sold.error;
-      else if (sold.value === null) next.soldFor = 'Sold for is required';
-      if (!isValidIsoDate(soldDate.trim())) next.soldDate = 'Use the format YYYY-MM-DD';
+      else if (sold.value === null) next.soldFor = t('itemForm.soldForRequired');
+      if (!isValidIsoDate(soldDate.trim())) next.soldDate = t('itemForm.dateFormat');
     }
 
     setErrors(next);
@@ -225,9 +225,9 @@ export function ItemFormModal({
   async function handleDelete() {
     if (!item) return;
     const confirmed = await confirmAsync(
-      'Delete item?',
-      `“${item.name}” and its photos will be deleted permanently.`,
-      'Delete',
+      t('itemForm.deleteTitle'),
+      t('itemForm.deleteBody', { name: item.name }),
+      t('common.delete'),
     );
     if (!confirmed) return;
     setBusy('deleting');
@@ -252,13 +252,13 @@ export function ItemFormModal({
 
   return (
     <ModalSheet
-      title={item ? 'Edit item' : 'Add item'}
+      title={item ? t('itemForm.edit') : t('itemForm.add')}
       onClose={onClose}
       footer={
         <>
           {item ? (
             <Button
-              title="Delete"
+              title={t('common.delete')}
               icon="trash-outline"
               variant="danger-ghost"
               onPress={handleDelete}
@@ -267,8 +267,8 @@ export function ItemFormModal({
             />
           ) : null}
           <View className="flex-1" />
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={disabled} />
-          <Button title="Save" onPress={handleSave} loading={busy === 'saving'} disabled={disabled} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={disabled} />
+          <Button title={t('common.save')} onPress={handleSave} loading={busy === 'saving'} disabled={disabled} />
         </>
       }>
       {formError ? <ErrorBanner message={formError} /> : null}
@@ -282,93 +282,93 @@ export function ItemFormModal({
         disabled={disabled}
       />
       <Field
-        label="Name"
+        label={t('itemForm.name')}
         value={name}
         onChangeText={edit(setName, 'name')}
-        placeholder="e.g. Levi's 501 jeans"
+        placeholder={t('itemForm.namePlaceholder')}
         error={errors.name}
         editable={!disabled}
       />
       <View className="flex-row gap-3">
         <Field
-          label="Brand"
+          label={t('itemForm.brand')}
           value={brand}
           onChangeText={setBrand}
-          placeholder="Optional"
+          placeholder={t('common.optional')}
           editable={!disabled}
           className="flex-1"
         />
         <Field
-          label="Size"
+          label={t('itemForm.size')}
           value={size}
           onChangeText={setSize}
-          placeholder="Optional"
+          placeholder={t('common.optional')}
           autoCapitalize="characters"
           editable={!disabled}
           className="flex-1"
         />
       </View>
       <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Condition</Text>
-        <Chips options={CONDITION_OPTIONS} value={condition} onChange={setCondition} disabled={disabled} />
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('itemForm.condition')}</Text>
+        <Chips options={conditionOptions} value={condition} onChange={setCondition} disabled={disabled} />
       </View>
       <View className="gap-1">
         <View className="flex-row items-center gap-2">
-          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</Text>
+          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('itemForm.category')}</Text>
           {suggestingCategory ? <ActivityIndicator size="small" color={BRAND_COLOR} /> : null}
         </View>
         <CategoryPicker value={category} onChange={changeCategory} disabled={disabled} />
         {categorySuggestError ? (
           <Text className="text-xs text-red-600">{categorySuggestError}</Text>
         ) : categoryLocked ? (
-          <Text className="text-xs text-slate-500 dark:text-slate-400">You chose this category — clear it to get a new suggestion.</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">{t('itemForm.categoryLocked')}</Text>
         ) : categoryFromAi ? (
           <Text className="text-xs text-slate-500 dark:text-slate-400">
-            Picked automatically from your details{newPhotos.length > 0 || keptPhotos.length > 0 ? ' and photos' : ''}.
-            Open the list to override.
+            {t('itemForm.categoryAi', {
+              photos: newPhotos.length > 0 || keptPhotos.length > 0 ? t('itemForm.categoryAiPhotos') : '',
+            })}
           </Text>
         ) : suggestingCategory ? (
-          <Text className="text-xs text-slate-500 dark:text-slate-400">Finding a category…</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">{t('itemForm.categoryFinding')}</Text>
         ) : name.trim() === '' ? (
-          <Text className="text-xs text-slate-500 dark:text-slate-400">Add a name to get a category suggestion.</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">{t('itemForm.categoryNeedName')}</Text>
         ) : (
-          <Text className="text-xs text-slate-500 dark:text-slate-400">Updates when you change the description or photos.</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">{t('itemForm.categoryUpdates')}</Text>
         )}
       </View>
       <View className="flex-row gap-3">
         <PriceField
-          label="Bought for (Ft)"
+          label={t('itemForm.boughtFor')}
           value={boughtFor}
           onChangeText={edit(setBoughtFor, 'boughtFor')}
-          hint="Including fees and shipping"
+          hint={t('itemForm.boughtHint')}
           error={errors.boughtFor}
           editable={!disabled}
           className="flex-1"
         />
         <PriceField
-          label="Listed for (Ft)"
+          label={t('itemForm.listedFor')}
           value={listedFor}
           onChangeText={changeListedFor}
-          hint="Optional"
+          hint={t('common.optional')}
           error={errors.listedFor}
           editable={!disabled}
           className="flex-1"
         />
       </View>
       <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Status</Text>
-        <Segmented options={STATUS_OPTIONS} value={status} onChange={changeStatus} disabled={disabled} />
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('itemForm.status')}</Text>
+        <Segmented options={statusOptions} value={status} onChange={changeStatus} disabled={disabled} />
         {item?.bundle_id && item.status === 'listed' && item.bundle_listed_for !== null ? (
           <Text className="text-xs text-slate-500 dark:text-slate-400">
-            Part of a bundle listed for {formatHuf(item.bundle_listed_for)}. Setting it to In
-            stock or Sold takes it out of the bundle.
+            {t('itemForm.inBundle', { price: formatHuf(item.bundle_listed_for) })}
           </Text>
         ) : null}
       </View>
       {status === 'sold' ? (
         <View className="flex-row gap-3">
           <PriceField
-            label="Sold for (Ft)"
+            label={t('itemForm.soldFor')}
             value={soldFor}
             onChangeText={edit(setSoldFor, 'soldFor')}
             error={errors.soldFor}
@@ -376,10 +376,10 @@ export function ItemFormModal({
             className="flex-1"
           />
           <Field
-            label="Sold date"
+            label={t('itemForm.soldDate')}
             value={soldDate}
             onChangeText={edit(setSoldDate, 'soldDate')}
-            placeholder="YYYY-MM-DD"
+            placeholder={t('itemForm.datePlaceholder')}
             error={errors.soldDate}
             editable={!disabled}
             className="flex-1"
@@ -387,19 +387,19 @@ export function ItemFormModal({
         </View>
       ) : null}
       <Field
-        label="Measurements"
+        label={t('itemForm.measurements')}
         value={measurements}
         onChangeText={setMeasurements}
-        placeholder="Optional, e.g. pit to pit 52 cm, length 70 cm"
+        placeholder={t('itemForm.measurementsPlaceholder')}
         multiline
         style={MULTILINE_STYLE}
         editable={!disabled}
       />
       <Field
-        label="Flaws"
+        label={t('itemForm.flaws')}
         value={flaws}
         onChangeText={setFlaws}
-        placeholder="Optional, e.g. small stain on the left sleeve"
+        placeholder={t('itemForm.flawsPlaceholder')}
         multiline
         style={MULTILINE_STYLE}
         editable={!disabled}
@@ -407,7 +407,7 @@ export function ItemFormModal({
       {item ? (
         <View className="gap-2">
           <Button
-            title={showMore ? 'Less' : 'More'}
+            title={showMore ? t('itemForm.less') : t('itemForm.more')}
             variant="ghost"
             size="sm"
             onPress={toggleMore}
@@ -415,11 +415,11 @@ export function ItemFormModal({
           />
           {showMore ? (
             <View className="gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-              <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Status history</Text>
+              <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('itemForm.history')}</Text>
               {historyError ? (
                 <Text className="text-sm text-red-600">{historyError}</Text>
               ) : history === null ? (
-                <Text className="text-sm text-slate-500 dark:text-slate-400">Loading…</Text>
+                <Text className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading')}</Text>
               ) : (
                 history.map((change, index) => (
                   <View key={`${change.changed_at}-${index}`} className="flex-row items-center gap-3">

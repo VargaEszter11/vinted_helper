@@ -1,3 +1,5 @@
+import { getT, translateServerMessage } from '@/lib/i18n';
+
 const NBSP = ' ';
 const MAX_PRICE = 9_999_999_999;
 
@@ -31,7 +33,11 @@ export function splitEvenly(total: number, count: number): number[] {
 }
 
 export function formatItemCount(count: number): string {
-  return `${count} ${count === 1 ? 'item' : 'items'}`;
+  return getT()(count === 1 ? 'count.item' : 'count.items', { count });
+}
+
+export function formatVisibleOf(visible: number, total: number): string {
+  return getT()('count.of', { visible, total: formatItemCount(total) });
 }
 
 export function priceToInput(value: number | null | undefined): string {
@@ -49,10 +55,10 @@ export function parsePrice(input: string): { value: number | null; error?: strin
     .replace(',', '.');
   if (cleaned === '') return { value: null };
   if (!/^\d+(\.\d+)?$/.test(cleaned)) {
-    return { value: null, error: 'Enter a price of 0 or more, e.g. 4500' };
+    return { value: null, error: getT()('price.invalid') };
   }
   const value = Number(cleaned);
-  if (value > MAX_PRICE) return { value: null, error: 'That price is too large' };
+  if (value > MAX_PRICE) return { value: null, error: getT()('price.tooLarge') };
   return { value };
 }
 
@@ -74,7 +80,7 @@ export function isValidIsoDate(input: string): boolean {
 
 export function errorMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'message' in error && error.message) {
-    return String(error.message);
+    return translateServerMessage(String(error.message));
   }
-  return 'Something went wrong. Please try again.';
+  return getT()('error.generic');
 }

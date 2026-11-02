@@ -13,19 +13,51 @@ import {
   type UsedListing,
 } from '@/lib/buy-check';
 import { formatDateTime, formatHuf, parsePrice } from '@/lib/format';
+import { translateServerMessage, useT, type MessageKey, type Translator } from '@/lib/i18n';
 
-const VERDICT_STYLES: Record<Verdict | 'LOW_CONFIDENCE', { box: string; text: string; label: string }> = {
-  BUY: { box: 'bg-emerald-100 border-emerald-300 dark:bg-emerald-950 dark:border-emerald-800', text: 'text-emerald-800 dark:text-emerald-200', label: 'BUY' },
-  MAYBE: { box: 'bg-amber-100 border-amber-300 dark:bg-amber-950 dark:border-amber-800', text: 'text-amber-800 dark:text-amber-200', label: 'MAYBE' },
-  SKIP: { box: 'bg-red-100 border-red-300 dark:bg-red-950 dark:border-red-800', text: 'text-red-800 dark:text-red-200', label: 'SKIP' },
-  LOW_CONFIDENCE: { box: 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-600', text: 'text-slate-700 dark:text-slate-200', label: 'LOW CONFIDENCE' },
+const VERDICT_STYLES: Record<Verdict | 'LOW_CONFIDENCE', { box: string; text: string; label: MessageKey }> = {
+  BUY: { box: 'bg-emerald-100 border-emerald-300 dark:bg-emerald-950 dark:border-emerald-800', text: 'text-emerald-800 dark:text-emerald-200', label: 'verdict.BUY' },
+  MAYBE: { box: 'bg-amber-100 border-amber-300 dark:bg-amber-950 dark:border-amber-800', text: 'text-amber-800 dark:text-amber-200', label: 'verdict.MAYBE' },
+  SKIP: { box: 'bg-red-100 border-red-300 dark:bg-red-950 dark:border-red-800', text: 'text-red-800 dark:text-red-200', label: 'verdict.SKIP' },
+  LOW_CONFIDENCE: { box: 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-600', text: 'text-slate-700 dark:text-slate-200', label: 'verdict.LOW_CONFIDENCE' },
 };
 
-const SOURCE_LABELS = {
-  own_sales: 'your own sales',
-  used_asking: 'second-hand asking prices (−10%)',
-  new_price: 'the new price (−50%)',
-} as const;
+const SOURCE_KEYS = {
+  own_sales: 'prices.sourceOwn',
+  used_asking: 'prices.sourceUsed',
+  new_price: 'prices.sourceNew',
+} as const satisfies Record<string, MessageKey>;
+
+function explainVerdict(data: PricesResult, t: Translator): string {
+  const { verdict, price, thresholds } = data;
+  if (!verdict.estimate) return t('verdict.noData');
+  const outcome =
+    (verdict.margin ?? 0) >= 0
+      ? t('verdict.margin', { value: formatHuf(verdict.margin ?? 0) })
+      : t('verdict.loss', { value: formatHuf(-(verdict.margin ?? 0)) });
+  const basis =
+    verdict.estimate.basis ??
+    (verdict.estimate.source === 'new_price'
+      ? Math.round(verdict.estimate.value / 0.5)
+      : verdict.estimate.source === 'used_asking'
+        ? Math.round(verdict.estimate.value / 0.9)
+        : verdict.estimate.value);
+  const vars = {
+    count: verdict.estimate.data_points,
+    value: formatHuf(verdict.estimate.value),
+    price: formatHuf(price),
+    outcome,
+    basis: formatHuf(basis),
+    thin: '',
+  };
+  if (verdict.estimate.source === 'own_sales') return t('verdict.ownSales', vars);
+  if (verdict.estimate.source === 'used_asking') {
+    const n = verdict.estimate.data_points;
+    const thin = n < thresholds.minDataPoints ? t(n === 1 ? 'verdict.usedThin' : 'verdict.usedThinPlural', { count: n }) : '';
+    return t('verdict.usedAsking', { ...vars, thin });
+  }
+  return t('verdict.newPrice', vars);
+}
 
 const openLink = (url: string) => {
   Linking.openURL(url).catch(() => {});
@@ -51,6 +83,7 @@ export function PricesSection({
   state: PricesState;
   onFind: () => void;
 }) {
+  const t = useT();
   const { loading, error, data } = state;
   const [overrideText, setOverrideText] = useState('');
   const [showDropped, setShowDropped] = useState(false);
@@ -60,17 +93,12 @@ export function PricesSection({
 
   return (
     <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-      <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">Prices</Text>
-      <Text className="text-sm text-slate-600 dark:text-slate-300">
-        Looked up automatically for the details above: the web is searched for the new price and for
-        second-hand listings (Vinted, Jófogás, eBay and others, whatever the search finds). The
-        photos of the listings are compared with yours. When the item has a brand, only that brand
-        is searched. If you correct a detail, search again.
-      </Text>
+      <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{t('prices.title')}</Text>
+      <Text className="text-sm text-slate-600 dark:text-slate-300">{t('prices.intro')}</Text>
 
       <View className="flex-row flex-wrap gap-2">
         <Button
-          title="Search again"
+          title={t('prices.searchAgain')}
           icon="refresh-outline"
           variant="secondary"
           onPress={onFind}
@@ -78,7 +106,7 @@ export function PricesSection({
           disabled={!canSearch}
         />
         <Button
-          title="Open Vinted.hu search"
+          title={t('prices.openVinted')}
           icon="open-outline"
           variant="secondary"
           onPress={() => openLink(vintedSearchUrl(searchPhrase))}
@@ -86,7 +114,7 @@ export function PricesSection({
         />
       </View>
 
-      {loading ? <Text className="text-sm text-slate-500 dark:text-slate-400">Searching. This can take up to a minute…</Text> : null}
+      {loading ? <Text className="text-sm text-slate-500 dark:text-slate-400">{t('prices.searching')}</Text> : null}
       {error ? <ErrorBanner message={error} /> : null}
 
       {data && !loading ? (
@@ -115,6 +143,7 @@ function PricesResultView({
   showDropped: boolean;
   onToggleDropped: () => void;
 }) {
+  const t = useT();
   const { web, own_sales: own, verdict } = data;
   const override = parsePrice(overrideText);
 
@@ -122,9 +151,9 @@ function PricesResultView({
     <View className="gap-4">
       {data.cache ? (
         <Text className="text-xs text-slate-500 dark:text-slate-400">
-          {data.cache.hit ? 'Saved result from ' : 'Searched at '}
-          {formatDateTime(data.cache.fetched_at)}
-          {data.cache.hit ? ' (results are kept for 24 hours)' : ''}
+          {t(data.cache.hit ? 'prices.cachedFrom' : 'prices.searchedAt', {
+            when: formatDateTime(data.cache.fetched_at),
+          })}
         </Text>
       ) : null}
 
@@ -132,20 +161,22 @@ function PricesResultView({
         <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
           <Ionicons name="warning-outline" size={18} color="#b45309" />
           <Text className="flex-1 text-sm text-amber-800">
-            {web.message ?? 'The price lookup is unavailable right now.'} Your own sales are still used below.
+            {web.message ? translateServerMessage(web.message, t) : t('prices.webUnavailable')}
           </Text>
         </View>
       ) : null}
 
       {web.available ? (
         <>
-          <Block title="New price (Hungarian shops)">
+          <Block title={t('prices.newPrice')}>
             {web.new_price ? (
               <>
                 <Text className="text-sm text-slate-800 dark:text-slate-200">
                   {formatHuf(web.new_price.min)}
                   {web.new_price.max !== web.new_price.min ? ` – ${formatHuf(web.new_price.max)}` : ''}
-                  {web.new_price.sources.length > 1 ? `  (median ${formatHuf(web.new_price.median)})` : ''}
+                  {web.new_price.sources.length > 1
+                    ? `  ${t('prices.median', { value: formatHuf(web.new_price.median) })}`
+                    : ''}
                 </Text>
                 {web.new_price.sources.map((source) => (
                   <LinkRow
@@ -158,24 +189,23 @@ function PricesResultView({
                 ))}
               </>
             ) : (
-              <Text className="text-sm text-slate-500 dark:text-slate-400">No new price found.</Text>
+              <Text className="text-sm text-slate-500 dark:text-slate-400">{t('prices.noNewPrice')}</Text>
             )}
           </Block>
 
-          <Block title="Second-hand listings (asking prices, not sold prices)">
+          <Block title={t('prices.usedListings')}>
             {web.used.listings.length > 0 ? (
               web.used.listings.map((listing) => <ListingRow key={listing.url} listing={listing} />)
             ) : (
-              <Text className="text-sm text-slate-500 dark:text-slate-400">
-                No similar second-hand listings found in the web search. Try the Vinted.hu search button to
-                check by hand.
-              </Text>
+              <Text className="text-sm text-slate-500 dark:text-slate-400">{t('prices.noUsed')}</Text>
             )}
             {web.used.dropped.length > 0 ? (
               <View className="gap-1">
                 <Pressable onPress={onToggleDropped} accessibilityRole="button" className="self-start py-1">
                   <Text className="text-sm font-medium text-teal-700 dark:text-teal-300">
-                    {showDropped ? 'Hide' : 'Show'} not used ({web.used.dropped.length})
+                    {t(showDropped ? 'prices.hideDropped' : 'prices.showDropped', {
+                      count: web.used.dropped.length,
+                    })}
                   </Text>
                 </Pressable>
                 {showDropped
@@ -187,48 +217,63 @@ function PricesResultView({
 
           {data.visual.compared > 0 ? (
             <Text className="text-xs text-slate-500 dark:text-slate-400">
-              Listing photos compared with yours: {data.visual.compared}
-              {data.visual.dropped > 0 ? `, ${data.visual.dropped} removed as a different item` : ''}.
+              {t('prices.visualCompared', { compared: data.visual.compared })}
+              {data.visual.dropped > 0 ? t('prices.visualDropped', { dropped: data.visual.dropped }) : ''}
+              .
             </Text>
           ) : null}
-          {data.visual.note ? <Text className="text-xs text-slate-500 dark:text-slate-400">{data.visual.note}</Text> : null}
-          {web.rates_note ? <Text className="text-xs text-slate-500 dark:text-slate-400">{web.rates_note}</Text> : null}
-          {web.note ? <Text className="text-xs text-slate-500 dark:text-slate-400">{web.note}</Text> : null}
+          {data.visual.note ? (
+            <Text className="text-xs text-slate-500 dark:text-slate-400">{translateServerMessage(data.visual.note, t)}</Text>
+          ) : null}
+          {web.rates_note ? (
+            <Text className="text-xs text-slate-500 dark:text-slate-400">{translateServerMessage(web.rates_note, t)}</Text>
+          ) : null}
+          {web.note ? (
+            <Text className="text-xs text-slate-500 dark:text-slate-400">{translateServerMessage(web.note, t)}</Text>
+          ) : null}
         </>
       ) : null}
 
-      <Block title="Your own sales">
+      <Block title={t('prices.ownSales')}>
         {own.count > 0 ? (
           <Text className="text-sm text-slate-800 dark:text-slate-200">
-            {own.count} similar sold ({own.match === 'brand_category' ? 'same brand and category' : 'same category'}),
-            median {formatHuf(own.median_sold_for ?? 0)}
-            {own.median_days_to_sell !== null
-              ? `, median ${own.median_days_to_sell} days to sell (${own.days_samples} listed)`
-              : ''}
-            .
+            {t('prices.ownSalesSummary', {
+              count: own.count,
+              match: t(own.match === 'brand_category' ? 'prices.matchBrandCategory' : 'prices.matchCategory'),
+              median: formatHuf(own.median_sold_for ?? 0),
+              days:
+                own.median_days_to_sell !== null
+                  ? t('prices.daysToSell', { days: own.median_days_to_sell, listed: own.days_samples })
+                  : '',
+            })}
           </Text>
         ) : (
-          <Text className="text-sm text-slate-500 dark:text-slate-400">No similar sold items of yours.</Text>
+          <Text className="text-sm text-slate-500 dark:text-slate-400">{t('prices.noOwnSales')}</Text>
         )}
       </Block>
 
-      <Block title="Verdict">
+      <Block title={t('prices.verdict')}>
         <VerdictBadge verdict={verdict.verdict} leaning={verdict.leaning} />
-        <Text className="text-sm text-slate-700 dark:text-slate-300">{verdict.explanation}</Text>
+        <Text className="text-sm text-slate-700 dark:text-slate-300">{explainVerdict(data, t)}</Text>
         {verdict.estimate ? (
           <Text className="text-xs text-slate-500 dark:text-slate-400">
-            Resale estimate {formatHuf(verdict.estimate.value)} from {SOURCE_LABELS[verdict.estimate.source]}; you pay{' '}
-            {formatHuf(data.price)}; margin {formatHuf(verdict.margin ?? 0)}
-            {verdict.margin_percent !== null ? ` (${verdict.margin_percent}%)` : ''}. BUY needs at least{' '}
-            {data.thresholds.buyMarginPercent}% and {formatHuf(data.thresholds.buyMinMarginHuf)} margin.
+            {t('prices.estimateLine', {
+              estimate: formatHuf(verdict.estimate.value),
+              source: t(SOURCE_KEYS[verdict.estimate.source]),
+              price: formatHuf(data.price),
+              margin: formatHuf(verdict.margin ?? 0),
+              percent: verdict.margin_percent !== null ? ` (${verdict.margin_percent}%)` : '',
+              buyPercent: data.thresholds.buyMarginPercent,
+              buyMin: formatHuf(data.thresholds.buyMinMarginHuf),
+            })}
           </Text>
         ) : null}
 
         <PriceField
-          label="Typical resale price (Ft)"
+          label={t('prices.overrideLabel')}
           value={overrideText}
           onChangeText={onOverrideChange}
-          hint="Optional: type what you expect to sell it for to recalculate the verdict."
+          hint={t('prices.overrideHint')}
           error={overrideText !== '' ? override.error : undefined}
         />
         {override.value !== null && !override.error ? (
@@ -240,6 +285,7 @@ function PricesResultView({
 }
 
 function OverrideVerdict({ resale, data }: { resale: number; data: PricesResult }) {
+  const t = useT();
   const margin = Math.round(resale - data.price);
   const verdict = classifyMargin(margin, data.price, data.thresholds);
   const percent = data.price > 0 ? ` (${Math.round((margin / data.price) * 100)}%)` : '';
@@ -247,23 +293,30 @@ function OverrideVerdict({ resale, data }: { resale: number; data: PricesResult 
     <View className="gap-1 rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
       <VerdictBadge verdict={verdict} leaning={null} />
       <Text className="text-sm text-slate-700 dark:text-slate-300">
-        With your resale price of {formatHuf(resale)} and {formatHuf(data.price)} to pay,{' '}
-        {margin >= 0 ? `the margin is ${formatHuf(margin)}` : `you would lose ${formatHuf(-margin)}`}
-        {percent}.
+        {t(margin >= 0 ? 'prices.overrideGain' : 'prices.overrideLoss', {
+          resale: formatHuf(resale),
+          price: formatHuf(data.price),
+          margin: formatHuf(margin),
+          loss: formatHuf(-margin),
+          percent,
+        })}
       </Text>
     </View>
   );
 }
 
 function VerdictBadge({ verdict, leaning }: { verdict: Verdict | 'LOW_CONFIDENCE'; leaning: Verdict | null }) {
+  const t = useT();
   const style = VERDICT_STYLES[verdict];
   return (
     <View className="flex-row flex-wrap items-center gap-2">
       <View className={`self-start rounded-lg border px-3 py-1.5 ${style.box}`}>
-        <Text className={`text-base font-bold ${style.text}`}>{style.label}</Text>
+        <Text className={`text-base font-bold ${style.text}`}>{t(style.label)}</Text>
       </View>
       {verdict === 'LOW_CONFIDENCE' && leaning ? (
-        <Text className="text-sm text-slate-500 dark:text-slate-400">leaning {leaning}</Text>
+        <Text className="text-sm text-slate-500 dark:text-slate-400">
+          {t('prices.leaning', { verdict: t(`verdict.${leaning}`) })}
+        </Text>
       ) : null}
     </View>
   );
@@ -279,16 +332,24 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function ListingRow({ listing, muted = false }: { listing: UsedListing; muted?: boolean }) {
+  const t = useT();
   const details = [listing.site, listing.size, listing.condition].filter(Boolean).join(' · ');
+  const reason = listing.reason ? translateServerMessage(listing.reason, t) : null;
   return (
     <LinkRow
       title={listing.title}
       url={listing.url}
       right={listing.price !== null ? formatHuf(listing.price) : '—'}
-      detail={[details, muted ? listing.reason : null].filter(Boolean).join(' — ') || null}
+      detail={[details, muted ? reason : null].filter(Boolean).join(' — ') || null}
       muted={muted}
       image={listing.image_url}
-      badge={listing.visual?.match === 'same' ? 'Looks the same' : listing.visual?.match === 'similar' ? 'Looks similar' : null}
+      badge={
+        listing.visual?.match === 'same'
+          ? t('prices.looksSame')
+          : listing.visual?.match === 'similar'
+            ? t('prices.looksSimilar')
+            : null
+      }
     />
   );
 }

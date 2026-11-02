@@ -8,18 +8,24 @@ import { ConfirmHost } from '@/components/confirm-host';
 import { CenteredSpinner } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { isApiConfigured } from '@/lib/api';
+import { LanguageProvider, useT } from '@/lib/i18n';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 
 export default function RootLayout() {
-  if (!isApiConfigured) return <MissingConfig />;
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ThemedStatusBar />
-        <RootNavigator />
-        <ConfirmHost />
-      </AuthProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      {isApiConfigured ? (
+        <ThemeProvider>
+          <AuthProvider>
+            <ThemedStatusBar />
+            <RootNavigator />
+            <ConfirmHost />
+          </AuthProvider>
+        </ThemeProvider>
+      ) : (
+        <MissingConfig />
+      )}
+    </LanguageProvider>
   );
 }
 
@@ -44,13 +50,11 @@ function RootNavigator() {
 }
 
 function MissingConfig() {
+  const t = useT();
   return (
     <View className="flex-1 items-center justify-center gap-2 bg-slate-50 p-6 dark:bg-slate-950">
-      <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">The server is not configured</Text>
-      <Text className="max-w-md text-center text-sm text-slate-600 dark:text-slate-400">
-        Copy frontend/.env.example to frontend/.env, set EXPO_PUBLIC_API_URL to your backend&apos;s
-        address, then restart the dev server.
-      </Text>
+      <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('config.title')}</Text>
+      <Text className="max-w-md text-center text-sm text-slate-600 dark:text-slate-400">{t('config.body')}</Text>
     </View>
   );
 }

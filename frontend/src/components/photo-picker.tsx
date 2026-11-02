@@ -5,6 +5,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from '
 import { Thumbnail } from '@/components/thumbnail';
 import { BRAND_COLOR, Button } from '@/components/ui';
 import { errorMessage } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { pickPhotos } from '@/lib/photos';
 import type { ItemPhoto, LocalPhoto } from '@/lib/types';
 
@@ -27,6 +28,7 @@ export function PhotoPicker({
   onRemoveAdded: (photo: LocalPhoto) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,9 +49,9 @@ export function PhotoPicker({
 
   return (
     <View className="gap-2">
-      <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Photos</Text>
+      <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('photos.label')}</Text>
       {isEmpty ? (
-        <Text className="text-sm text-slate-500 dark:text-slate-400">No photos yet.</Text>
+        <Text className="text-sm text-slate-500 dark:text-slate-400">{t('photos.empty')}</Text>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
           {existing.map((photo) => (
@@ -79,7 +81,7 @@ export function PhotoPicker({
       )}
       <View className="flex-row gap-2">
         <Button
-          title={Platform.OS === 'web' ? 'Choose files' : 'Gallery'}
+          title={Platform.OS === 'web' ? t('buyCheck.chooseFiles') : t('buyCheck.gallery')}
           icon="images-outline"
           variant="secondary"
           size="sm"
@@ -88,7 +90,7 @@ export function PhotoPicker({
         />
         {Platform.OS !== 'web' ? (
           <Button
-            title="Camera"
+            title={t('buyCheck.camera')}
             icon="camera-outline"
             variant="secondary"
             size="sm"
@@ -111,6 +113,7 @@ export function PhotoTile({
   onRemove: () => void;
   disabled: boolean;
 }) {
+  const t = useT();
   return (
     <View>
       <Thumbnail uri={uri} size={TILE_SIZE} />
@@ -118,7 +121,7 @@ export function PhotoTile({
         onPress={onRemove}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel="Remove photo"
+        accessibilityLabel={t('photos.remove')}
         hitSlop={6}
         className="absolute right-1 top-1 rounded-full bg-black/60 p-1">
         <Ionicons name="close" size={14} color="#ffffff" />

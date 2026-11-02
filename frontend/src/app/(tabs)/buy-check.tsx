@@ -4,11 +4,10 @@ import { ActivityIndicator, Platform, ScrollView, Text, View } from 'react-nativ
 
 import { NO_PRICES, PricesSection, type PricesState } from '@/components/buy-check-prices';
 import { PhotoTile, TILE_SIZE } from '@/components/photo-picker';
-import { BRAND_COLOR, Button, Chips, ErrorBanner, Field, PriceField } from '@/components/ui';
+import { BRAND_COLOR, Button, Chips, ErrorBanner, Field, PriceField, useConditionOptions } from '@/components/ui';
 import {
   BUY_CHECK_PHOTO_WIDTH,
   CATEGORY_OPTIONS,
-  CONDITION_OPTIONS,
   MAX_BUY_CHECK_PHOTOS,
   RESULT_FIELDS,
   findPrices,
@@ -19,22 +18,26 @@ import {
   type ResultField,
 } from '@/lib/buy-check';
 import { errorMessage, formatHuf, parsePrice } from '@/lib/format';
+import { useT, type MessageKey } from '@/lib/i18n';
 import { pickPhotos } from '@/lib/photos';
 import type { LocalPhoto } from '@/lib/types';
 
-const CONFIDENCE_LABELS = { low: 'Low', medium: 'Medium', high: 'High' } as const;
+const CONFIDENCE_KEYS = {
+  low: 'buyCheck.confidenceLow',
+  medium: 'buyCheck.confidenceMedium',
+  high: 'buyCheck.confidenceHigh',
+} as const satisfies Record<string, MessageKey>;
 
-/** Text fields of the result, in display order. Category and condition are chips. */
-const TEXT_FIELDS: { key: ResultField; label: string }[] = [
-  { key: 'suggested_name', label: 'Suggested name' },
-  { key: 'brand', label: 'Brand' },
-  { key: 'model', label: 'Model / style' },
-  { key: 'item_type', label: 'Item type' },
-  { key: 'size', label: 'Size' },
-  { key: 'colour', label: 'Colour' },
-  { key: 'material', label: 'Material' },
-  { key: 'search_phrase', label: 'Search phrase' },
-  { key: 'visible_text', label: 'Text read from tags and labels' },
+const TEXT_FIELD_KEYS: { key: ResultField; label: MessageKey }[] = [
+  { key: 'suggested_name', label: 'buyCheck.suggestedName' },
+  { key: 'brand', label: 'buyCheck.brand' },
+  { key: 'model', label: 'buyCheck.model' },
+  { key: 'item_type', label: 'buyCheck.itemType' },
+  { key: 'size', label: 'buyCheck.size' },
+  { key: 'colour', label: 'buyCheck.colour' },
+  { key: 'material', label: 'buyCheck.material' },
+  { key: 'search_phrase', label: 'buyCheck.searchPhrase' },
+  { key: 'visible_text', label: 'buyCheck.visibleText' },
 ];
 
 type Edits = Record<ResultField, string>;
@@ -56,6 +59,8 @@ const pricesItem = (edits: Edits): PricesItem => ({
 });
 
 export default function BuyCheckScreen() {
+  const t = useT();
+  const conditionOptions = useConditionOptions();
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [picking, setPicking] = useState(false);
   const [priceText, setPriceText] = useState('');
@@ -153,11 +158,11 @@ export default function BuyCheckScreen() {
 
         <View className="gap-2">
           <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Photos ({photos.length}/{MAX_BUY_CHECK_PHOTOS})
+            {t('buyCheck.photos', { count: photos.length, max: MAX_BUY_CHECK_PHOTOS })}
           </Text>
           {photos.length === 0 && !picking ? (
             <Text className="text-sm text-slate-500 dark:text-slate-400">
-              Add up to {MAX_BUY_CHECK_PHOTOS} photos. Include the tag or label if you can.
+              {t('buyCheck.photosHint', { max: MAX_BUY_CHECK_PHOTOS })}
             </Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
@@ -180,7 +185,7 @@ export default function BuyCheckScreen() {
           )}
           <View className="flex-row gap-2">
             <Button
-              title={Platform.OS === 'web' ? 'Choose files' : 'Gallery'}
+              title={Platform.OS === 'web' ? t('buyCheck.chooseFiles') : t('buyCheck.gallery')}
               icon="images-outline"
               variant="secondary"
               size="sm"
@@ -189,7 +194,7 @@ export default function BuyCheckScreen() {
             />
             {Platform.OS !== 'web' ? (
               <Button
-                title="Camera"
+                title={t('buyCheck.camera')}
                 icon="camera-outline"
                 variant="secondary"
                 size="sm"
@@ -201,7 +206,7 @@ export default function BuyCheckScreen() {
         </View>
 
         <PriceField
-          label="Price I would pay (Ft)"
+          label={t('buyCheck.priceIWouldPay')}
           value={priceText}
           onChangeText={setPriceText}
           error={priceText !== '' ? price.error : undefined}
@@ -210,23 +215,23 @@ export default function BuyCheckScreen() {
 
         <View className="gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
           <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Details you already know (optional)
+            {t('buyCheck.knownDetails')}
           </Text>
           <View className="flex-row gap-3">
-            <Field label="Brand" value={brand} onChangeText={setBrand} editable={!checking} className="flex-1" />
-            <Field label="Colour" value={colour} onChangeText={setColour} editable={!checking} className="flex-1" />
+            <Field label={t('buyCheck.brand')} value={brand} onChangeText={setBrand} editable={!checking} className="flex-1" />
+            <Field label={t('buyCheck.colour')} value={colour} onChangeText={setColour} editable={!checking} className="flex-1" />
           </View>
           <Field
-            label="Size"
+            label={t('buyCheck.size')}
             value={size}
             onChangeText={setSize}
             autoCapitalize="characters"
             editable={!checking}
           />
           <View className="gap-1">
-            <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Condition</Text>
+            <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('buyCheck.condition')}</Text>
             <Chips
-              options={CONDITION_OPTIONS}
+              options={conditionOptions}
               value={condition}
               onChange={(value) => setCondition(value as ConditionValue | null)}
               disabled={checking}
@@ -236,19 +241,19 @@ export default function BuyCheckScreen() {
 
         <View className="flex-row flex-wrap gap-2">
           <Button
-            title={result ? 'Check again' : 'Check item'}
+            title={result ? t('buyCheck.checkAgain') : t('buyCheck.checkItem')}
             icon="scan-outline"
             onPress={check}
             loading={checking}
             disabled={!canCheck}
           />
           {hasAnything ? (
-            <Button title="Clear / new check" variant="secondary" onPress={clear} disabled={checking} />
+            <Button title={t('buyCheck.clear')} variant="secondary" onPress={clear} disabled={checking} />
           ) : null}
         </View>
 
         {checking ? (
-          <Text className="text-sm text-slate-500 dark:text-slate-400">Looking at your photos. This takes a few seconds…</Text>
+          <Text className="text-sm text-slate-500 dark:text-slate-400">{t('buyCheck.looking')}</Text>
         ) : null}
 
         {result && edits && !checking ? (
@@ -281,19 +286,26 @@ function ResultCard({
   edits: Edits;
   onEdit: (key: ResultField, value: string) => void;
 }) {
+  const t = useT();
+  const conditionOptions = useConditionOptions();
+  const categoryOptions = CATEGORY_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(`itemCategory.${option.value}`),
+  }));
   const hint = (key: ResultField) => {
-    if (edits[key] !== (result.fields[key] ?? '')) return 'Edited by you';
-    if (result.sources[key] === 'user') return 'You entered this';
-    if (result.sources[key] === 'ai') return 'Suggested by the AI';
-    return 'Not visible in the photos';
+    if (edits[key] !== (result.fields[key] ?? '')) return t('buyCheck.hintEdited');
+    if (result.sources[key] === 'user') return t('buyCheck.hintUser');
+    if (result.sources[key] === 'ai') return t('buyCheck.hintAi');
+    return t('buyCheck.hintEmpty');
   };
 
   return (
     <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
       <View className="flex-row flex-wrap items-center justify-between gap-2">
-        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">Result</Text>
+        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{t('buyCheck.result')}</Text>
         <Text className="text-sm text-slate-600 dark:text-slate-300">
-          Confidence: <Text className="font-semibold">{CONFIDENCE_LABELS[result.confidence]}</Text>
+          {t('buyCheck.confidence')}
+          <Text className="font-semibold">{t(CONFIDENCE_KEYS[result.confidence])}</Text>
         </Text>
       </View>
 
@@ -301,38 +313,38 @@ function ResultCard({
         <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
           <Ionicons name="warning-outline" size={18} color="#b45309" />
           <Text className="flex-1 text-sm text-amber-800">
-            Check these details. The AI was not sure, so correct anything that is wrong.
+            {t('buyCheck.lowHint')}
           </Text>
         </View>
       ) : null}
 
       <View className="flex-row items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
-        <Text className="text-sm text-slate-600 dark:text-slate-300">Your price</Text>
+        <Text className="text-sm text-slate-600 dark:text-slate-300">{t('buyCheck.yourPrice')}</Text>
         <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{formatHuf(result.price)}</Text>
       </View>
 
-      {TEXT_FIELDS.slice(0, 1).map(({ key, label }) => (
-        <Field key={key} label={label} value={edits[key]} onChangeText={(v) => onEdit(key, v)} hint={hint(key)} />
+      {TEXT_FIELD_KEYS.slice(0, 1).map(({ key, label }) => (
+        <Field key={key} label={t(label)} value={edits[key]} onChangeText={(v) => onEdit(key, v)} hint={hint(key)} />
       ))}
 
       <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</Text>
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('buyCheck.category')}</Text>
         <Chips
-          options={CATEGORY_OPTIONS}
+          options={categoryOptions}
           value={edits.category || null}
           onChange={(value) => onEdit('category', value ?? '')}
         />
         <Text className="text-xs text-slate-500 dark:text-slate-400">{hint('category')}</Text>
       </View>
 
-      {TEXT_FIELDS.slice(1).map(({ key, label }) => (
-        <Field key={key} label={label} value={edits[key]} onChangeText={(v) => onEdit(key, v)} hint={hint(key)} />
+      {TEXT_FIELD_KEYS.slice(1).map(({ key, label }) => (
+        <Field key={key} label={t(label)} value={edits[key]} onChangeText={(v) => onEdit(key, v)} hint={hint(key)} />
       ))}
 
       <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Condition</Text>
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('buyCheck.condition')}</Text>
         <Chips
-          options={CONDITION_OPTIONS}
+          options={conditionOptions}
           value={edits.condition || null}
           onChange={(value) => onEdit('condition', value ?? '')}
         />

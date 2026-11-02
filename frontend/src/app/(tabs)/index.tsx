@@ -12,7 +12,6 @@ import {
   BRAND_COLOR,
   Button,
   CenteredSpinner,
-  CONDITION_OPTIONS,
   EmptyState,
   ErrorBanner,
   ErrorState,
@@ -22,15 +21,17 @@ import {
   SearchField,
   Segmented,
   StatusBadge,
+  useConditionOptions,
   useWideLayout,
 } from '@/components/ui';
 import { useItemList } from '@/hooks/use-item-list';
-import { formatItemCount } from '@/lib/format';
+import { formatItemCount, formatVisibleOf } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { vintedCategoryById } from '@/lib/item-vinted-categories';
 import {
   DEFAULT_ITEM_SORT,
   filterOptions,
-  ITEM_SORT_OPTIONS,
+  itemSortOptions,
   itemMatchesFilters,
   itemMatchesQuery,
   NO_FILTERS,
@@ -43,12 +44,6 @@ import type { Item, ItemStatus } from '@/lib/types';
 const UNSOLD: ItemStatus[] = ['in_stock', 'listed'];
 
 type Filter = 'all' | 'in_stock' | 'listed';
-
-const FILTERS: { value: Filter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'in_stock', label: 'In stock' },
-  { value: 'listed', label: 'Listed' },
-];
 
 type Row =
   | { kind: 'item'; item: Item; inBundle: boolean }
@@ -81,6 +76,13 @@ const rowKey = (row: Row) =>
   row.kind === 'bundle' ? `bundle-${row.id}` : `${row.inBundle ? 'bundled' : 'item'}-${row.item.id}`;
 
 export default function ItemsScreen() {
+  const t = useT();
+  const conditionOptions = useConditionOptions();
+  const FILTERS: { value: Filter; label: string }[] = [
+    { value: 'all', label: t('filter.all') },
+    { value: 'in_stock', label: t('status.in_stock') },
+    { value: 'listed', label: t('status.listed') },
+  ];
   const { items, thumbnailFor, loading, refreshing, error, reload, refresh, retry } = useItemList(
     UNSOLD,
     'created_at',
@@ -190,12 +192,12 @@ export default function ItemsScreen() {
                 name={isSelected ? 'checkbox' : 'square-outline'}
                 size={24}
                 color={isSelected ? BRAND_COLOR : '#94a3b8'}
-                accessibilityLabel={isSelected ? 'Selected' : 'Not selected'}
+                accessibilityLabel={isSelected ? t('common.selected') : t('common.notSelected')}
               />
             )
           ) : inBundle ? null : (
             <Button
-              title={wide ? 'Mark as sold' : 'Sold'}
+              title={wide ? t('items.markSold') : t('items.soldShort')}
               variant="secondary"
               size="sm"
               onPress={() => setSelling(item)}
@@ -212,7 +214,7 @@ export default function ItemsScreen() {
     return (
       <Pressable
         onPress={() => setBundleEditing(bundle)}
-        accessibilityLabel={`Bundle of ${formatItemCount(bundle.items.length)}`}
+        accessibilityLabel={t('items.bundleA11y', { count: formatItemCount(bundle.items.length) })}
         disabled={selecting}
         style={selecting ? { opacity: 0.4 } : undefined}
         className={`flex-row items-center border-b border-l-4 border-slate-100 border-l-teal-600 bg-teal-50 py-2.5 active:bg-teal-100 dark:border-slate-800 dark:bg-teal-950 dark:active:bg-teal-900 ${rowClass}`}>
@@ -223,7 +225,7 @@ export default function ItemsScreen() {
         </View>
         <View className="flex-1 gap-1">
           <Text numberOfLines={1} className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Bundle
+            {t('items.bundleTitle')}
           </Text>
           <View className="flex-row items-center gap-1.5">
             {wide ? null : <StatusBadge status="listed" />}
@@ -244,7 +246,7 @@ export default function ItemsScreen() {
         <View className={`items-center ${actionClass}`}>
           {selecting ? null : (
             <Button
-              title={wide ? 'Mark as sold' : 'Sold'}
+              title={wide ? t('items.markSold') : t('items.soldShort')}
               variant="secondary"
               size="sm"
               onPress={() => setBundleSelling(bundle)}
@@ -264,12 +266,12 @@ export default function ItemsScreen() {
         {selecting ? (
           <View className="flex-row flex-wrap items-center gap-3 px-3 pt-3">
             <Text className="min-w-[160px] flex-1 text-sm text-slate-700 dark:text-slate-200">
-              Tap the items you listed together.
+              {t('items.selectHint')}
             </Text>
             <View className="flex-row gap-2">
-              <Button title="Cancel" variant="secondary" onPress={() => setSelected(null)} />
+              <Button title={t('common.cancel')} variant="secondary" onPress={() => setSelected(null)} />
               <Button
-                title={`Create bundle (${selected.length})`}
+                title={t('items.createBundle', { count: selected.length })}
                 icon="albums-outline"
                 onPress={() => setBundleEditing({ items: selectedItems })}
                 disabled={selected.length < 2}
@@ -282,9 +284,9 @@ export default function ItemsScreen() {
               <Segmented options={FILTERS} value={filter} onChange={setFilter} />
             </View>
             <View className="flex-row gap-2">
-              <Button title="Add item" icon="add" onPress={() => setEditing(null)} />
+              <Button title={t('items.add')} icon="add" onPress={() => setEditing(null)} />
               <Button
-                title="Bundle"
+                title={t('items.bundle')}
                 icon="albums-outline"
                 variant="secondary"
                 onPress={() => setSelected([])}
@@ -299,7 +301,7 @@ export default function ItemsScreen() {
           <View className="flex-row flex-wrap items-center gap-2">
             {brands.length > 0 ? (
               <FilterSelect
-                label="Brand"
+                label={t('filter.brand')}
                 options={brands.map((brand) => ({ value: brand, label: brand }))}
                 value={filters.brand}
                 onChange={(brand) => setFilters((current) => ({ ...current, brand }))}
@@ -307,15 +309,15 @@ export default function ItemsScreen() {
             ) : null}
             {sizes.length > 0 ? (
               <FilterSelect
-                label="Size"
+                label={t('filter.size')}
                 options={sizes.map((size) => ({ value: size, label: size }))}
                 value={filters.size}
                 onChange={(size) => setFilters((current) => ({ ...current, size }))}
               />
             ) : null}
             <FilterSelect
-              label="Condition"
-              options={CONDITION_OPTIONS}
+              label={t('filter.condition')}
+              options={conditionOptions}
               value={filters.condition}
               onChange={(condition) => setFilters((current) => ({ ...current, condition }))}
             />
@@ -325,16 +327,16 @@ export default function ItemsScreen() {
               onChange={(category) => setFilters((current) => ({ ...current, category }))}
             />
             <FilterSelect
-              label="Sort"
+              label={t('filter.sort')}
               clearable={false}
               keepButtonLabel
               defaultValue={DEFAULT_ITEM_SORT}
-              options={ITEM_SORT_OPTIONS}
+              options={itemSortOptions(t)}
               value={sortBy}
               onChange={(next) => next && setSortBy(next)}
             />
             {filtering ? (
-              <Button title="Clear filters" variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
+              <Button title={t('filter.clear')} variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
             ) : null}
           </View>
         </View>
@@ -347,10 +349,10 @@ export default function ItemsScreen() {
 
         <View className={`flex-row items-center border-b border-slate-200 py-2 dark:border-slate-800 ${rowClass}`}>
           <View style={{ width: thumbSize }} />
-          <HeaderText className="flex-1">Name</HeaderText>
-          <HeaderText className={`text-right ${moneyClass}`}>Bought</HeaderText>
-          <HeaderText className={`text-right ${moneyClass}`}>Listed</HeaderText>
-          {wide ? <HeaderText className="w-24">Status</HeaderText> : null}
+          <HeaderText className="flex-1">{t('items.colName')}</HeaderText>
+          <HeaderText className={`text-right ${moneyClass}`}>{t('items.colBought')}</HeaderText>
+          <HeaderText className={`text-right ${moneyClass}`}>{t('items.colListed')}</HeaderText>
+          {wide ? <HeaderText className="w-24">{t('items.colStatus')}</HeaderText> : null}
           <View className={actionClass} />
         </View>
 
@@ -367,15 +369,9 @@ export default function ItemsScreen() {
             }
             ListEmptyComponent={
               items.length === 0 ? (
-                <EmptyState title="No items in stock">
-                  Tap “Add item” to add the first thing you bought.
-                </EmptyState>
+                <EmptyState title={t('items.emptyTitle')}>{t('items.emptyBody')}</EmptyState>
               ) : (
-                <EmptyState
-                  title={
-                    searching || filtering ? 'No items match your search' : 'No items match this filter'
-                  }
-                />
+                <EmptyState title={searching || filtering ? t('items.noSearch') : t('items.noFilter')} />
               )
             }
             renderItem={({ item: row }) =>
@@ -389,7 +385,7 @@ export default function ItemsScreen() {
             <Text className="text-sm font-medium text-slate-700 dark:text-slate-200">
               {filter === 'all' && !searching && !filtering
                 ? formatItemCount(items.length)
-                : `${visibleItems.length} of ${formatItemCount(items.length)}`}
+                : formatVisibleOf(visibleItems.length, items.length)}
             </Text>
           </View>
         ) : null}

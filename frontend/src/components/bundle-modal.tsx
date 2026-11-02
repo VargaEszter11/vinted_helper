@@ -5,6 +5,7 @@ import { ModalSheet } from '@/components/modal-sheet';
 import { Button, ErrorBanner, PriceField } from '@/components/ui';
 import { confirmAsync } from '@/lib/confirm';
 import { errorMessage, formatHuf, formatItemCount, parsePrice, priceToInput } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { deleteBundle, newItemId, saveBundle } from '@/lib/items';
 import type { Item } from '@/lib/types';
 
@@ -23,6 +24,7 @@ export function BundleModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const isNew = bundleId === undefined;
   const [id] = useState(() => bundleId ?? newItemId());
   const [listedFor, setListedFor] = useState(priceToInput(items[0]?.bundle_listed_for));
@@ -34,7 +36,7 @@ export function BundleModal({
 
   async function handleSave() {
     const price = parsePrice(listedFor);
-    const error = price.error ?? (price.value === null ? 'Bundle price is required' : undefined);
+    const error = price.error ?? (price.value === null ? t('bundle.priceRequired') : undefined);
     setPriceError(error);
     if (error || price.value === null) return;
 
@@ -50,11 +52,7 @@ export function BundleModal({
   }
 
   async function handleUnbundle() {
-    const confirmed = await confirmAsync(
-      'Unbundle?',
-      'The items stay listed, each with its own price.',
-      'Unbundle',
-    );
+    const confirmed = await confirmAsync(t('bundle.unbundleTitle'), t('bundle.unbundleBody'), t('bundle.unbundle'));
     if (!confirmed) return;
     setBusy('unbundling');
     setFormError(null);
@@ -71,13 +69,13 @@ export function BundleModal({
 
   return (
     <ModalSheet
-      title={isNew ? 'Create bundle' : 'Edit bundle'}
+      title={isNew ? t('bundle.create') : t('bundle.edit')}
       onClose={onClose}
       footer={
         <>
           {isNew ? null : (
             <Button
-              title="Unbundle"
+              title={t('bundle.unbundle')}
               icon="cut-outline"
               variant="danger-ghost"
               onPress={handleUnbundle}
@@ -86,14 +84,14 @@ export function BundleModal({
             />
           )}
           <View className="flex-1" />
-          <Button title="Cancel" variant="secondary" onPress={onClose} disabled={disabled} />
-          <Button title="Save" onPress={handleSave} loading={busy === 'saving'} disabled={disabled} />
+          <Button title={t('common.cancel')} variant="secondary" onPress={onClose} disabled={disabled} />
+          <Button title={t('common.save')} onPress={handleSave} loading={busy === 'saving'} disabled={disabled} />
         </>
       }>
       {formError ? <ErrorBanner message={formError} /> : null}
       <View className="gap-1 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
         <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          {formatItemCount(items.length)} · bought for {formatHuf(totalBought)} in total
+          {t('bundle.summary', { count: formatItemCount(items.length), total: formatHuf(totalBought) })}
         </Text>
         {items.map((item) => (
           <Text key={item.id} numberOfLines={1} className="text-sm text-slate-600 dark:text-slate-300">
@@ -102,13 +100,13 @@ export function BundleModal({
         ))}
       </View>
       <PriceField
-        label="Bundle price (Ft)"
+        label={t('bundle.price')}
         value={listedFor}
         onChangeText={(value) => {
           setListedFor(value);
           setPriceError(undefined);
         }}
-        hint={isNew ? 'The items will be marked as listed.' : undefined}
+        hint={isNew ? t('bundle.listedHint') : undefined}
         error={priceError}
         editable={!disabled}
         autoFocus

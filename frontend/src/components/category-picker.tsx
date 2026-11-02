@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { FlatList, Modal, Platform, Pressable, Text, View } from 'react-native';
 
 import { BRAND_COLOR, SearchField } from '@/components/ui';
+import { useT } from '@/lib/i18n';
 import {
   searchVintedCategories,
   vintedCategoryById,
@@ -30,6 +31,7 @@ export function CategoryFilterSelect({
   options: CategoryOption[];
   onChange: (value: ItemVintedCategory | null) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const selectedLabel =
@@ -61,7 +63,7 @@ export function CategoryFilterSelect({
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel="Filter by category"
+        accessibilityLabel={t('category.filterA11y')}
         className={`flex-row items-center gap-1 rounded-lg border px-3 py-2 ${
           active
             ? 'border-teal-700 bg-teal-50 dark:bg-teal-950'
@@ -70,7 +72,7 @@ export function CategoryFilterSelect({
         <Text
           numberOfLines={1}
           className={`max-w-[140px] text-sm ${active ? 'font-semibold text-teal-800 dark:text-teal-200' : 'text-slate-700 dark:text-slate-200'}`}>
-          {selectedLabel ?? 'Category'}
+          {selectedLabel ?? t('filter.category')}
         </Text>
         <Ionicons name="chevron-down" size={14} color={active ? BRAND_COLOR : '#64748b'} />
       </Pressable>
@@ -79,7 +81,7 @@ export function CategoryFilterSelect({
         <View className="flex-1 items-center justify-center bg-black/40 p-4">
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('common.close')}
             className="absolute inset-0"
             onPress={close}
           />
@@ -87,8 +89,8 @@ export function CategoryFilterSelect({
             className="w-full max-w-lg overflow-hidden rounded-2xl bg-white dark:bg-slate-900"
             style={Platform.OS === 'web' ? { boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18)' } : undefined}>
             <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">Category</Text>
-              <Pressable onPress={close} accessibilityLabel="Close" className="rounded-full p-1.5 active:bg-slate-100 dark:active:bg-slate-800">
+              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{t('filter.category')}</Text>
+              <Pressable onPress={close} accessibilityLabel={t('common.close')} className="rounded-full p-1.5 active:bg-slate-100 dark:active:bg-slate-800">
                 <Ionicons name="close" size={20} color="#475569" />
               </Pressable>
             </View>
@@ -96,9 +98,7 @@ export function CategoryFilterSelect({
               <SearchField
                 value={query}
                 onChangeText={setQuery}
-                placeholder={
-                  options.length > 0 ? 'Search categories in your items' : 'Search e.g. jeans, stroller, vinyl'
-                }
+                placeholder={options.length > 0 ? t('category.searchInItems') : t('category.searchTree')}
               />
             </View>
             <Pressable
@@ -107,7 +107,7 @@ export function CategoryFilterSelect({
                 close();
               }}
               className="border-b border-slate-100 px-4 py-2.5 active:bg-slate-50 dark:border-slate-800 dark:active:bg-slate-800">
-              <Text className="text-sm text-slate-600 dark:text-slate-300">All categories</Text>
+              <Text className="text-sm text-slate-600 dark:text-slate-300">{t('category.all')}</Text>
             </Pressable>
             <FlatList
               data={results}
@@ -115,7 +115,7 @@ export function CategoryFilterSelect({
               keyboardShouldPersistTaps="handled"
               style={{ maxHeight: LIST_MAX_HEIGHT }}
               ListEmptyComponent={
-                <Text className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">No categories match.</Text>
+                <Text className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">{t('category.none')}</Text>
               }
               renderItem={({ item }) => {
                 const selected = item.value === value;
@@ -148,6 +148,7 @@ export function CategoryPicker({
   onChange: (value: ItemVintedCategory | null) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -171,7 +172,7 @@ export function CategoryPicker({
         onPress={() => !disabled && setOpen(true)}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel="Choose category"
+        accessibilityLabel={t('category.chooseA11y')}
         className={`flex-row items-center gap-2 rounded-lg border px-3 py-2.5 ${
           selected
             ? 'border-teal-700 bg-teal-50 dark:bg-teal-950'
@@ -181,7 +182,7 @@ export function CategoryPicker({
         <Text
           numberOfLines={2}
           className={`flex-1 text-sm ${selected ? 'font-medium text-teal-900 dark:text-teal-100' : 'text-slate-600 dark:text-slate-300'}`}>
-          {selected ? selected.path : 'Choose a Vinted category'}
+          {selected ? selected.path : t('category.choose')}
         </Text>
         <Ionicons name="chevron-down" size={16} color="#64748b" />
       </Pressable>
@@ -190,7 +191,7 @@ export function CategoryPicker({
         <View className="flex-1 items-center justify-center bg-black/40 p-4">
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('common.close')}
             className="absolute inset-0"
             onPress={close}
           />
@@ -198,8 +199,8 @@ export function CategoryPicker({
             className="w-full max-w-lg overflow-hidden rounded-2xl bg-white dark:bg-slate-900"
             style={Platform.OS === 'web' ? { boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18)' } : undefined}>
             <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">Choose category</Text>
-              <Pressable onPress={close} accessibilityLabel="Close" className="rounded-full p-1.5 active:bg-slate-100 dark:active:bg-slate-800">
+              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{t('category.chooseTitle')}</Text>
+              <Pressable onPress={close} accessibilityLabel={t('common.close')} className="rounded-full p-1.5 active:bg-slate-100 dark:active:bg-slate-800">
                 <Ionicons name="close" size={20} color="#475569" />
               </Pressable>
             </View>
@@ -207,7 +208,7 @@ export function CategoryPicker({
               <SearchField
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search e.g. jeans, stroller, vinyl"
+                placeholder={t('category.searchTree')}
               />
             </View>
             {value ? (
@@ -217,7 +218,7 @@ export function CategoryPicker({
                   close();
                 }}
                 className="border-b border-slate-100 px-4 py-2.5 active:bg-slate-50 dark:border-slate-800 dark:active:bg-slate-800">
-                <Text className="text-sm text-slate-600 dark:text-slate-300">Clear category</Text>
+                <Text className="text-sm text-slate-600 dark:text-slate-300">{t('category.clear')}</Text>
               </Pressable>
             ) : null}
             <FlatList
@@ -226,7 +227,7 @@ export function CategoryPicker({
               keyboardShouldPersistTaps="handled"
               style={{ maxHeight: LIST_MAX_HEIGHT }}
               ListEmptyComponent={
-                <Text className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">No categories match.</Text>
+                <Text className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">{t('category.none')}</Text>
               }
               renderItem={({ item }) => {
                 const active = item.id === value;

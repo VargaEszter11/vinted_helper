@@ -3,10 +3,12 @@ import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, ErrorBanner, Field } from '@/components/ui';
-import { errorMessage } from '@/lib/format';
 import { signIn } from '@/lib/api';
+import { errorMessage } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 
 export default function SignInScreen() {
+  const t = useT();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -16,11 +18,11 @@ export default function SignInScreen() {
   async function submit() {
     setError(null);
     if (username.trim() === '' || password === '') {
-      setError('Enter your username and password.');
+      setError(t('auth.needCredentials'));
       return;
     }
     if (mode === 'register' && password.length < 8) {
-      setError('Choose a password of at least 8 characters.');
+      setError(t('auth.passwordTooShort'));
       return;
     }
 
@@ -43,11 +45,11 @@ export default function SignInScreen() {
           <View className="w-full max-w-sm gap-4">
             <View className="gap-1">
               <Text className="text-3xl font-bold text-teal-700 dark:text-teal-300">Vinted Helper</Text>
-              <Text className="text-base text-slate-600 dark:text-slate-400">Sign in to your stock tracker.</Text>
+              <Text className="text-base text-slate-600 dark:text-slate-400">{t('auth.tagline')}</Text>
             </View>
             {error ? <ErrorBanner message={error} /> : null}
             <Field
-              label="Username"
+              label={t('auth.username')}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
@@ -56,7 +58,7 @@ export default function SignInScreen() {
               editable={!loading}
             />
             <Field
-              label="Password"
+              label={t('auth.password')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -65,12 +67,12 @@ export default function SignInScreen() {
               editable={!loading}
             />
             <Button
-              title={mode === 'login' ? 'Sign in' : 'Create account'}
+              title={mode === 'login' ? t('auth.signIn') : t('auth.createAccount')}
               onPress={submit}
               loading={loading}
             />
             <Button
-              title={mode === 'login' ? 'Create an account' : 'I already have an account'}
+              title={mode === 'login' ? t('auth.createAnAccount') : t('auth.haveAccount')}
               variant="secondary"
               onPress={() => {
                 setMode(mode === 'login' ? 'register' : 'login');

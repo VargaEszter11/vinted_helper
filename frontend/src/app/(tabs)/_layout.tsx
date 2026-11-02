@@ -5,11 +5,13 @@ import { Pressable, Text } from 'react-native';
 import { BRAND_COLOR } from '@/components/ui';
 import { setToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
 
 export default function TabLayout() {
   const { isAdmin } = useAuth();
   const { theme } = useTheme();
+  const t = useT();
   const dark = theme === 'dark';
   return (
     <Tabs
@@ -29,7 +31,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Items',
+          title: t('tabs.items'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="pricetags-outline" color={color} size={size} />
           ),
@@ -38,21 +40,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="sold"
         options={{
-          title: 'Sold',
+          title: t('tabs.sold'),
           tabBarIcon: ({ color, size }) => <Ionicons name="cash-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="buy-check"
         options={{
-          title: 'Buy check',
+          title: t('tabs.buyCheck'),
           tabBarIcon: ({ color, size }) => <Ionicons name="scan-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: t('tabs.settings'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" color={color} size={size} />
           ),
@@ -61,7 +63,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="admin"
         options={{
-          title: 'Admin',
+          title: t('tabs.admin'),
           // No tab for anyone but the admin account.
           href: isAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => (
@@ -74,12 +76,13 @@ export default function TabLayout() {
 }
 
 function SignOutButton() {
+  const t = useT();
   return (
     <Pressable
       onPress={() => setToken(null)}
       accessibilityRole="button"
       className="mr-2 rounded-lg px-3 py-1.5 active:bg-slate-100 dark:active:bg-slate-800">
-      <Text className="text-sm font-medium text-slate-600 dark:text-slate-300">Sign out</Text>
+      <Text className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('common.signOut')}</Text>
     </Pressable>
   );
 }

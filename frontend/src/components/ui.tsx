@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { formatHuf } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
 import type { ItemCondition, ItemStatus } from '@/lib/types';
 
@@ -142,15 +143,17 @@ export function PriceField(props: Omit<ComponentProps<typeof Field>, 'keyboardTy
 export function SearchField({
   value,
   onChangeText,
-  placeholder = 'Search by name, brand, or size',
+  placeholder,
 }: {
   value: string;
   onChangeText: (value: string) => void;
   placeholder?: string;
 }) {
+  const t = useT();
   const [focused, setFocused] = useState(false);
   const { theme } = useTheme();
   const dark = theme === 'dark';
+  const hint = placeholder ?? t('search.placeholder');
   return (
     <View
       className="w-full flex-row items-center gap-2 rounded-lg border bg-white px-3 dark:bg-slate-900"
@@ -160,7 +163,7 @@ export function SearchField({
       <TextInput
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={hint}
         placeholderTextColor={dark ? '#64748b' : '#94a3b8'}
         autoCapitalize="none"
         autoCorrect={false}
@@ -168,7 +171,7 @@ export function SearchField({
         selectionColor={BRAND_COLOR}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        accessibilityLabel="Search items"
+        accessibilityLabel={t('search.items')}
         // Inline, so it beats the browser's default blue focus ring.
         style={NO_BROWSER_OUTLINE}
         className="flex-1 py-2.5 text-base text-slate-900 dark:text-slate-100"
@@ -177,7 +180,7 @@ export function SearchField({
         <Pressable
           onPress={() => onChangeText('')}
           accessibilityRole="button"
-          accessibilityLabel="Clear search"
+          accessibilityLabel={t('search.clear')}
           hitSlop={8}>
           <Ionicons name="close-circle" size={18} color="#94a3b8" />
         </Pressable>
@@ -241,11 +244,7 @@ export function Segmented<T extends string>({
   );
 }
 
-export const STATUS_LABELS: Record<ItemStatus, string> = {
-  in_stock: 'In stock',
-  listed: 'Listed',
-  sold: 'Sold',
-};
+export const STATUS_VALUES: ItemStatus[] = ['in_stock', 'listed', 'sold'];
 
 const STATUS_STYLES: Record<ItemStatus, { box: string; text: string }> = {
   in_stock: { box: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-200' },
@@ -254,24 +253,21 @@ const STATUS_STYLES: Record<ItemStatus, { box: string; text: string }> = {
 };
 
 export function StatusBadge({ status }: { status: ItemStatus }) {
+  const t = useT();
   const styles = STATUS_STYLES[status];
   return (
     <View className={`self-start rounded-full px-2 py-0.5 ${styles.box}`}>
-      <Text className={`text-xs font-medium ${styles.text}`}>{STATUS_LABELS[status]}</Text>
+      <Text className={`text-xs font-medium ${styles.text}`}>{t(`status.${status}`)}</Text>
     </View>
   );
 }
 
-export const CONDITION_OPTIONS: { value: ItemCondition; label: string }[] = [
-  { value: 'new_with_tags', label: 'New with tags' },
-  { value: 'very_good', label: 'Very good' },
-  { value: 'good', label: 'Good' },
-  { value: 'fair', label: 'Fair' },
-];
+const CONDITION_VALUES: ItemCondition[] = ['new_with_tags', 'very_good', 'good', 'fair'];
 
-export const CONDITION_LABELS: Record<ItemCondition, string> = Object.fromEntries(
-  CONDITION_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<ItemCondition, string>;
+export function useConditionOptions(): { value: ItemCondition; label: string }[] {
+  const t = useT();
+  return CONDITION_VALUES.map((value) => ({ value, label: t(`condition.${value}`) }));
+}
 
 /** A row of toggle chips: tap one to choose it, tap it again to clear (back to `null`). */
 export function Chips<T extends string>({
@@ -332,6 +328,7 @@ export function FilterSelect<T extends string>({
   /** With `keepButtonLabel`, highlight when value differs from this (e.g. non-default sort). */
   defaultValue?: T;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const selectedLabel = options.find((option) => option.value === value)?.label;
   const active = clearable
@@ -348,7 +345,7 @@ export function FilterSelect<T extends string>({
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={keepButtonLabel ? `Sort by ${label}` : `Filter by ${label}`}
+        accessibilityLabel={keepButtonLabel ? t('filter.sortBy', { label }) : t('filter.by', { label })}
         className={`flex-row items-center gap-1 rounded-lg border px-3 py-2 ${
           active
             ? 'border-teal-700 bg-teal-50 dark:bg-teal-950'
@@ -368,7 +365,7 @@ export function FilterSelect<T extends string>({
           className="flex-1 items-center justify-center bg-black/40 p-6"
           onPress={() => setOpen(false)}
           accessibilityRole="button"
-          accessibilityLabel="Close">
+              accessibilityLabel={t('common.close')}>
           {/* Stops the tap from reaching the backdrop above and closing the popup. */}
           <Pressable className="max-h-[70%] w-full max-w-xs rounded-xl bg-white dark:bg-slate-900">
             <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
@@ -376,7 +373,7 @@ export function FilterSelect<T extends string>({
               <Pressable
                 onPress={() => setOpen(false)}
                 accessibilityRole="button"
-                accessibilityLabel="Close"
+                accessibilityLabel={t('common.close')}
                 className="rounded-full p-1 active:bg-slate-100 dark:active:bg-slate-800">
                 <Ionicons name="close" size={20} color="#94a3b8" />
               </Pressable>
@@ -384,7 +381,7 @@ export function FilterSelect<T extends string>({
             <ScrollView contentContainerClassName="p-2">
               {clearable ? (
                 <FilterOption
-                  label={`All (${label.toLowerCase()})`}
+                  label={t('filter.allOf', { label: label.toLowerCase() })}
                   selected={value === null}
                   onPress={() => choose(null)}
                 />
@@ -475,14 +472,15 @@ export function CenteredSpinner() {
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const t = useT();
   return (
     <View className="flex-1 items-center justify-center gap-3 p-6">
       <Ionicons name="cloud-offline-outline" size={36} color="#64748b" />
       <Text className="text-center text-base font-semibold text-slate-800 dark:text-slate-100">
-        Could not load your items
+        {t('error.loadItems')}
       </Text>
       <Text className="text-center text-sm text-slate-500 dark:text-slate-400">{message}</Text>
-      <Button title="Try again" variant="secondary" onPress={onRetry} />
+      <Button title={t('common.retry')} variant="secondary" onPress={onRetry} />
     </View>
   );
 }
