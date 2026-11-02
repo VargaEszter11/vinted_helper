@@ -50,10 +50,13 @@ Rules:
 - "colour": the main colour, plus a second one or the pattern if clear, for example "navy blue", "black and white striped".
 - "condition": new_with_tags only if tags are visible and attached; otherwise judge wear (very_good, good, fair), or null if you cannot tell.
 - "suggested_name": a short listing title in the form "Brand model/type colour", for example "Levi's 501 straight jeans blue". Leave out the brand or model when unknown.
-- "search_phrase": 2 to 6 words a buyer would type to find the same item, with the most specific words first, for example "levis 501 blue jeans".
+- "search_phrase": 3 to 7 words a buyer on Hungarian Vinted would type, most specific first: brand (if known), model or distinctive detail, colour, item type. Keep English brand names. Example: "levis 501 blue jeans", "zara brown leather top".
 - Use null for anything you cannot actually see. A wrong specific answer is worse than null.
 - Details the user entered are correct. Do not contradict them, and use them in suggested_name and search_phrase.
-- "confidence": "high" only when a tag or label confirms the brand and the model or type is clear; "medium" when the brand or type is clear but not confirmed by text; "low" when the photos are unclear or the item is hard to identify.`;
+- "confidence" (do not default to low):
+  - "high" when the item type is clear AND the brand is confirmed by readable text, a logo, or an unmistakable trademark design.
+  - "medium" when the item type, cut and colour are clear even if the brand is unknown or unconfirmed. If you filled in a specific item_type, confidence is at least medium.
+  - "low" only when the photos are too poor to tell what the garment is (blurry, dark, cropped, or ambiguous).`;
 
 const RETRY_PROMPT =
   'That was not a valid JSON object in the required format. Reply again with ONLY the JSON object.';
@@ -172,6 +175,20 @@ function parseReply(content) {
 }
 
 /**
+ * The model often answers "low" even when it identified a clear garment. Raise that to match
+ * the rules: a specific item type is at least medium; brand + type with a tag is high.
+ */
+function calibrateConfidence(fields, entered) {
+  const type = fields.item_type;
+  const brand = entered.brand || fields.brand;
+  const tagged = Boolean(fields.visible_text) || Boolean(entered.brand);
+  const specificType = Boolean(type) && type.split(/\s+/).filter(Boolean).length >= 2;
+  if (brand && type && (tagged || fields.model || specificType)) return 'high';
+  if (type) return fields.confidence === 'low' ? 'medium' : fields.confidence;
+  return fields.confidence;
+}
+
+/**
  * Identifies an item from 1 to 3 base64 JPEGs. `entered` holds what the user typed
  * (brand, colour, condition, size; empty or missing means not entered).
  * Returns the model's fields and the token usage.
@@ -211,5 +228,6 @@ export async function identifyItem(images, entered) {
   }
   if (!fields) throw new RecognitionError('Could not read the result of the image check. Try again.', 502);
 
+  fields.confidence = calibrateConfidence(fields, entered);
   return { fields, usage };
 }

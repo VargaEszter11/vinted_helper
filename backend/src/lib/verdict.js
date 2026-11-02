@@ -13,7 +13,7 @@ export const VERDICT_CONFIG = {
   /** Own sold items needed before they are used as the estimate. */
   minOwnSales: 3,
   /** Data points needed behind the estimate; fewer means low confidence. */
-  minDataPoints: 3,
+  minDataPoints: 2,
 };
 
 const formatHuf = (value) => `${Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} Ft`;

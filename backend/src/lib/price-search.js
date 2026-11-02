@@ -5,30 +5,39 @@ import { median } from './stats.js';
 // ---------------------------------------------------------------------------
 // Settings. To switch provider or model, change this block and callSearch()/callModel().
 //
-// How it works: two plain web searches go through DeepSeek's Search API (no site restriction,
-// so results can come from any shop or marketplace), then the chat model reads ONLY those search
-// results and picks out prices. The model refers to results by number, never by URL, and every
-// price it reports must appear in that result's own text, so it cannot invent links or prices.
+// How it works: several web searches go through DeepSeek's Search API (open web plus Vinted.hu
+// and Jófogás), then the chat model reads ONLY those search results and picks out prices. The
+// model refers to results by number, never by URL, and every price it reports must appear in
+// that result's own text, so it cannot invent links or prices.
 // ---------------------------------------------------------------------------
 
 const BASE_URL = process.env.DEEPSEEK_BASE_URL ?? 'https://api.deepseek.com';
 const SEARCH_PATH = '/v1/tools/search';
 const MODEL = process.env.DEEPSEEK_MODEL ?? 'deepseek-flash';
-const SEARCH_TIMEOUT_MS = 15_000;
+const SEARCH_TIMEOUT_MS = 20_000;
 const MODEL_TIMEOUT_MS = 45_000;
-const RESULTS_PER_SEARCH = 10;
-const MAX_OUTPUT_TOKENS = 1500;
-/** Longest piece of a result's text given to the model, in characters. */
-const MAX_RESULT_TEXT = 450;
+const RESULTS_PER_SEARCH = 20;
+const MAX_RESULTS_FOR_MODEL = 28;
+const MAX_OUTPUT_TOKENS = 2500;
+/** Longest piece of a marketplace listing's text given to the model, in characters. */
+const MAX_MARKETPLACE_TEXT = 1400;
+const MAX_OTHER_TEXT = 700;
 
 /** Search queries. {phrase} is the item's search phrase. Hungarian: "ár" = price, "használt eladó" = used, for sale. */
 /** Bump when the searches change, so results cached by an older version are not reused. */
-export const SEARCH_VERSION = 2;
+export const SEARCH_VERSION = 3;
 
-const PRICE_QUERY = '{phrase} ár Ft';
-const USED_QUERY = '{phrase} használt eladó';
+const SEARCHES = [
+  { template: '{phrase} ár Ft -site:pinterest.com', needContent: false },
+  { template: '{phrase} használt eladó -site:pinterest.com', needContent: false },
+  { template: '{phrase} site:vinted.hu', needContent: true },
+  { template: '{phrase} site:jofogas.hu', needContent: true },
+];
+const ORI_QUESTION = 'Használt ruha eladó ár Magyarország Vinted Jófogás';
+
 /** Hosts that sell second-hand or private ads: never a source of new prices. */
 const NOT_NEW_PRICE_HOSTS = ['vinted.', 'ebay.', 'facebook.', 'olx.', 'jofogas.', 'marketplace', 'aprohirdetes.', 'hardverapro.'];
+const MARKETPLACE_HOSTS = ['vinted.', 'jofogas.', 'olx.', 'ebay.', 'facebook.', 'marketplace'];
 
 /** Approximate forints per unit of foreign currency, used only to show other currencies in Ft. */
 export const RATES_TO_HUF = { HUF: 1, EUR: 400, USD: 370, GBP: 470, CHF: 420, PLN: 92, CZK: 16, RON: 80 };
@@ -46,11 +55,12 @@ Reply with ONLY one JSON object, no other text and no markdown:
 
 Rules:
 - If the item has a brand, use ONLY results about that exact brand. Skip results about any other brand, even for a very similar item. For a second-hand listing of another brand, set "same_item" to false and "reason" to "different brand".
+- Prefer Vinted.hu and Jófogás listings: include every one of that brand and kind of item that has a price.
 - "id" is the number of a search result. Never write links.
-- "price" is a number exactly as written in that result's text, in the currency shown there ("HUF" for Ft or forint, "EUR", "USD", ...). Never invent, estimate or adjust a price, and never take it from a result that does not state it.
+- "price" is a number exactly as written in that result's text, in the currency shown there ("HUF" for Ft or forint, "EUR", "USD", ...). Hungarian prices look like "5.990 Ft", "5 990 Ft" or "5990Ft" — copy the number (5990). Never invent, estimate or adjust a price, and never take it from a result that does not state it.
 - "new_price_sources": results from online shops that sell this item, or the closest equivalent, NEW, with its current price. One entry per shop. Skip second-hand sites and marketplaces, news, blogs and results without a clear price.
-- "used_listings": results that are second-hand or private listings (Vinted, Jofogas, eBay, Facebook Marketplace, other resale sites, or a shop's used section) for this kind of item, with an asking price. Include every such listing that has a price. A result can be in only one of the two lists.
-- Set "same_item" to true only for a genuine match: the same kind of item, a similar size range (one size away is fine), the adult version. Set it to false for the wrong kind of item, a clearly different size range, a kids' version, a bundle or lot of several items, "wanted" posts, accessories or parts, and give a short "reason" for every false. For true, "reason" is a few words on why it matches.
+- "used_listings": results that are second-hand or private listings (Vinted, Jofogas, eBay, Facebook Marketplace, other resale sites, or a shop's used section) for this kind of item, with an asking price. Include every such listing that has a price, not just a few. A result can be in only one of the two lists.
+- Set "same_item" to true for a useful price comparison: the same kind of garment from the same brand (the exact model is a plus, not required), a similar size range (one size away is fine), the adult version. Set it to false for the wrong kind of item, a clearly different size range, a kids' version, a bundle or lot of several items, "wanted" posts, accessories or parts, and give a short "reason" for every false. For true, "reason" is a few words on why it matches.
 - Use null for "size" or "condition" when the text does not say.
 - Use empty lists when nothing fits. "note" is one short sentence about anything the reseller should know (for example that few results were found), or null.`;
 
@@ -81,25 +91,66 @@ const plain = (text) =>
  * so the search engine keeps to that brand: `"Zara" black wool coat`. A brand with punctuation
  * (Levi's, H&M) stays unquoted, because an exact phrase would not match every spelling.
  */
-function queryPhrase(item) {
-  const phrase = plain(item.search_phrase);
-  const brand = item.brand ? plain(item.brand) : '';
-  if (!brand || !/^[\p{L}\p{N} ]+$/u.test(item.brand)) return phrase;
-  // The brand holds only letters, digits and spaces here, so it is safe inside a RegExp.
-  const rest = phrase.replace(new RegExp(brand, 'ig'), ' ').replace(/\s+/g, ' ').trim();
-  return `"${brand}" ${rest}`.trim();
+function hungarianNoun(item) {
+  const hay = `${item.item_type ?? ''} ${item.search_phrase ?? ''} ${item.category ?? ''}`.toLowerCase();
+  const pairs = [
+    [/jeans|farmer/, 'farmer'],
+    [/sweater|jumper|hoodie|sweatshirt|pulover|pulcsi/, 'pulóver'],
+    [/t-?shirt|póló|polo/, 'póló'],
+    [/dress|ruha/, 'ruha'],
+    [/skirt|szoknya/, 'szoknya'],
+    [/coat|kabát|kabat/, 'kabát'],
+    [/jacket|dzseki|blazer/, 'dzseki'],
+    [/sneaker|trainers|tornacip/, 'tornacipő'],
+    [/boot|csizma/, 'csizma'],
+    [/bag|táska|taska/, 'táska'],
+    [/jeans|pants|trousers|nadrág|nadrag/, 'nadrág'],
+  ];
+  for (const [pattern, noun] of pairs) {
+    if (pattern.test(hay)) return noun;
+  }
+  return null;
 }
 
-/** Fills a query template. */
-const fill = (template, item) => template.replace('{phrase}', queryPhrase(item)).slice(0, 128);
+function queryPhrase(item) {
+  let phrase = plain(item.search_phrase);
+  const brand = item.brand ? plain(item.brand) : '';
+  if (brand && /^[\p{L}\p{N} ]+$/u.test(item.brand)) {
+    // The brand holds only letters, digits and spaces here, so it is safe inside a RegExp.
+    const rest = phrase.replace(new RegExp(brand, 'ig'), ' ').replace(/\s+/g, ' ').trim();
+    phrase = `"${brand}" ${rest}`.trim();
+  }
+  const colour = item.colour ? plain(item.colour) : '';
+  if (colour && !phrase.toLowerCase().includes(colour.toLowerCase())) {
+    phrase = `${phrase} ${colour}`.trim();
+  }
+  const noun = hungarianNoun(item);
+  if (noun && !phrase.toLowerCase().includes(noun.toLowerCase())) {
+    phrase = `${phrase} ${noun}`.trim();
+  }
+  return phrase;
+}
 
-async function callSearch(query) {
+/** Fills a query template, keeping operators (site:, -site:) inside the 128-character limit. */
+function fill(template, item) {
+  const extra = template.replace('{phrase}', '').trim();
+  const budget = Math.max(16, 128 - (extra ? extra.length + 1 : 0));
+  const phrase = queryPhrase(item).slice(0, budget).trim();
+  return (extra ? `${phrase} ${extra}` : phrase).slice(0, 128);
+}
+
+async function callSearch(query, { needContent = false } = {}) {
   let response;
   try {
     response = await fetch(`${BASE_URL}${SEARCH_PATH}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.deepseekApiKey}` },
-      body: JSON.stringify({ query, count: RESULTS_PER_SEARCH }),
+      body: JSON.stringify({
+        query,
+        count: RESULTS_PER_SEARCH,
+        ori_question: ORI_QUESTION,
+        need_content: needContent,
+      }),
       signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
     });
   } catch {
@@ -164,6 +215,19 @@ function hostOf(url) {
   }
 }
 
+function isMarketplace(host) {
+  return MARKETPLACE_HOSTS.some((part) => host.includes(part));
+}
+
+function resultText(result) {
+  const parts = [result.snippet, result.summary, result.content].filter(
+    (part) => typeof part === 'string' && part.trim() !== '',
+  );
+  const host = typeof result?.url === 'string' ? hostOf(result.url) : '';
+  const limit = isMarketplace(host) ? MAX_MARKETPLACE_TEXT : MAX_OTHER_TEXT;
+  return parts.join('\n').slice(0, limit);
+}
+
 /** Numbered results from all searches, without duplicate links or entries without a usable link. */
 function numberResults(...searches) {
   const list = [];
@@ -173,17 +237,24 @@ function numberResults(...searches) {
       const host = typeof result?.url === 'string' ? hostOf(result.url) : null;
       if (!host || !/^https?:/i.test(result.url) || seen.has(result.url)) continue;
       seen.add(result.url);
-      const text = [result.snippet, result.summary].filter((part) => typeof part === 'string' && part).join(' ');
       list.push({
-        id: list.length + 1,
+        id: 0,
         title: String(result.title ?? '').slice(0, 200),
         url: result.url,
         host,
-        text: text.slice(0, MAX_RESULT_TEXT),
+        text: resultText(result),
+        rerank: typeof result.rerank_score === 'number' ? result.rerank_score : 0,
       });
     }
   }
-  return list;
+  list.sort((a, b) => Number(isMarketplace(b.host)) - Number(isMarketplace(a.host)) || b.rerank - a.rerank);
+  return list.slice(0, MAX_RESULTS_FOR_MODEL).map((result, index) => ({
+    id: index + 1,
+    title: result.title,
+    url: result.url,
+    host: result.host,
+    text: result.text,
+  }));
 }
 
 function itemDescription(item) {
@@ -220,6 +291,41 @@ function priceAppearsIn(text, amount) {
   );
 }
 
+const MIN_LISTING_HUF = 500;
+const MAX_LISTING_HUF = 500_000;
+
+/** Forint amounts written in the snippet (5.990 Ft, 5 990 Ft, 5990Ft). */
+function extractFtAmounts(text) {
+  const amounts = [];
+  const patterns = [
+    /(\d{1,3}(?:[.\s ]\d{3})+|\d{3,6})\s*(?:Ft|ft|HUF|forint)/gi,
+    /(\d{1,3}(?:[.\s ]\d{3})+)\s*(?:,-)?/g,
+  ];
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const value = Number(String(match[1]).replace(/[.\s ]/g, ''));
+      if (value >= MIN_LISTING_HUF && value <= MAX_LISTING_HUF) amounts.push(value);
+    }
+  }
+  return [...new Set(amounts)];
+}
+
+/** The model's price if the snippet confirms it, otherwise a single Ft amount from the text. */
+function confirmedAmount(text, reported) {
+  if (typeof reported === 'number' && Number.isFinite(reported) && reported > 0 && priceAppearsIn(text, reported)) {
+    return { amount: reported, fromSnippet: false };
+  }
+  const amounts = extractFtAmounts(text);
+  if (typeof reported === 'number' && Number.isFinite(reported)) {
+    const rounded = Math.round(reported);
+    const match = amounts.find(
+      (amount) => amount === rounded || amount === Math.round(reported * 1000) || Math.abs(amount - rounded) <= 1,
+    );
+    if (match) return { amount: match, fromSnippet: true };
+  }
+  return amounts.length === 1 ? { amount: amounts[0], fromSnippet: true } : null;
+}
+
 function parseReply(content) {
   const start = content.indexOf('{');
   const end = content.lastIndexOf('}');
@@ -253,7 +359,10 @@ function assemble(reply, results, item) {
   const byId = new Map(results.map((result) => [result.id, result]));
   // The link is included too: shop domains and listing addresses often carry the brand name.
   const textOf = (result) => `${result.title} ${result.text} ${result.url}`;
-  const wrongBrand = (result) => Boolean(item.brand) && !mentionsBrand(textOf(result), item.brand);
+  // Marketplace hits already came from a branded query (`"Zara" … site:vinted.hu`), so the
+  // snippet often omits the brand even when the listing is for that brand.
+  const wrongBrand = (result) =>
+    Boolean(item.brand) && !mentionsBrand(textOf(result), item.brand) && !isMarketplace(result.host);
   let converted = false;
 
   const sources = [];
@@ -261,8 +370,9 @@ function assemble(reply, results, item) {
   const usedAsNew = new Set();
   for (const entry of reply.new_price_sources) {
     const result = byId.get(entry?.id);
-    const price = toHuf(entry?.price, entry?.currency);
-    if (!result || !price || !priceAppearsIn(textOf(result), entry.price)) continue;
+    const confirmed = result ? confirmedAmount(textOf(result), entry?.price) : null;
+    const price = confirmed ? toHuf(confirmed.amount, confirmed.fromSnippet ? 'HUF' : entry?.currency) : null;
+    if (!result || !price) continue;
     // Only the item's own brand: a result that does not name it is not used.
     if (wrongBrand(result)) continue;
     if (NOT_NEW_PRICE_HOSTS.some((host) => result.host.includes(host))) continue;
@@ -274,7 +384,7 @@ function assemble(reply, results, item) {
       title: result.title,
       url: result.url,
       price: price.huf,
-      original: price.converted ? { amount: entry.price, currency: price.code } : null,
+      original: price.converted ? { amount: confirmed.amount, currency: price.code } : null,
     });
   }
 
@@ -285,7 +395,8 @@ function assemble(reply, results, item) {
     const result = byId.get(entry?.id);
     if (!result || usedAsNew.has(result.id) || seenListings.has(result.id)) continue;
     seenListings.add(result.id);
-    const price = toHuf(entry?.price, entry?.currency);
+    const confirmed = confirmedAmount(textOf(result), entry?.price);
+    const price = confirmed ? toHuf(confirmed.amount, confirmed.fromSnippet ? 'HUF' : entry?.currency) : null;
     const base = {
       title: result.title,
       url: result.url,
@@ -295,7 +406,7 @@ function assemble(reply, results, item) {
     };
     if (wrongBrand(result)) {
       dropped.push({ ...base, price: price?.huf ?? null, reason: `The listing does not mention the brand ${item.brand}.` });
-    } else if (!price || !priceAppearsIn(textOf(result), entry.price)) {
+    } else if (!price) {
       dropped.push({ ...base, price: null, reason: 'The price could not be confirmed in the search result.' });
     } else if (entry.same_item !== true) {
       dropped.push({ ...base, price: price.huf, reason: cleanText(entry?.reason, 140) ?? 'Not the same kind of item.' });
@@ -303,6 +414,30 @@ function assemble(reply, results, item) {
       if (price.converted) converted = true;
       listings.push({ ...base, price: price.huf, reason: cleanText(entry?.reason, 140) });
     }
+  }
+
+  // Marketplace pages the model skipped, when the snippet has exactly one price and names the brand.
+  const claimed = new Set([
+    ...reply.new_price_sources.map((entry) => entry?.id),
+    ...reply.used_listings.map((entry) => entry?.id),
+  ]);
+  for (const result of results) {
+    if (claimed.has(result.id) || usedAsNew.has(result.id) || seenListings.has(result.id)) continue;
+    if (!isMarketplace(result.host)) continue;
+    if (item.brand && !mentionsBrand(textOf(result), item.brand)) continue;
+    const confirmed = confirmedAmount(textOf(result), null);
+    const price = confirmed ? toHuf(confirmed.amount, 'HUF') : null;
+    if (!price) continue;
+    seenListings.add(result.id);
+    listings.push({
+      title: result.title,
+      url: result.url,
+      site: result.host,
+      size: null,
+      condition: null,
+      price: price.huf,
+      reason: 'Taken from the listing snippet.',
+    });
   }
 
   const prices = sources.map((source) => source.price);
@@ -333,15 +468,15 @@ export async function searchPrices(item) {
     throw new LookupUnavailableError('Price lookup is not set up on this server.');
   }
 
-  const searches = await Promise.allSettled([
-    callSearch(fill(PRICE_QUERY, item)),
-    callSearch(fill(USED_QUERY, item)),
-  ]);
+  const searches = await Promise.allSettled(
+    SEARCHES.map((search) => callSearch(fill(search.template, item), { needContent: search.needContent })),
+  );
   const failures = searches.filter((search) => search.status === 'rejected');
   if (failures.length === searches.length) throw failures[0].reason;
 
   const results = numberResults(...searches.map((search) => (search.status === 'fulfilled' ? search.value : [])));
-  const partialNote = failures.length > 0 ? 'One of the two searches failed, so the result is incomplete.' : null;
+  const partialNote =
+    failures.length > 0 ? 'One of the searches failed, so the result may be incomplete.' : null;
 
   const usage = { prompt_tokens: 0, completion_tokens: 0 };
   if (results.length === 0) {
