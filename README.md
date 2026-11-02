@@ -1,6 +1,14 @@
 # Vinted Helper
 
-A stock and sales tracker for resellers. Track what you bought, what you have listed and what you sold, with photos and profit per item.
+**A stock, sales and buy-check app for second-hand clothing resellers.**
+
+Built for people who buy, list and sell on Vinted (and similar marketplaces) and want one place for cost, photos, status and whether the next find is worth buying. Prices are in Hungarian forint.
+
+- Track what you bought, listed and sold, with photos and profit per item
+- Search, filter and sort by brand, size, condition and Vinted category
+- Bundle items you listed or sold together, with the price split automatically
+- In a shop, **Buy check** identifies an item from photos and suggests BUY / MAYBE / SKIP from web prices and your own sales
+
 
 It is an Expo (React Native) app that runs on iPhone, Android and the web from one codebase, talking to a small Node.js API backed by Postgres.
 
