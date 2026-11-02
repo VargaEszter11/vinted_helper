@@ -104,8 +104,8 @@ export function MarkSoldModal({
       }>
       {formError ? <ErrorBanner message={formError} /> : null}
       <View className="gap-0.5">
-        <Text className="text-base font-semibold text-slate-900">{item.name}</Text>
-        <Text className="text-sm text-slate-500">Bought for {formatHuf(item.bought_for)}</Text>
+        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{item.name}</Text>
+        <Text className="text-sm text-slate-500 dark:text-slate-400">Bought for {formatHuf(item.bought_for)}</Text>
       </View>
 
       {otherItems.length > 0 ? (
@@ -119,8 +119,8 @@ export function MarkSoldModal({
 
       {asBundle ? (
         <View className="gap-1">
-          <Text className="text-sm font-medium text-slate-700">Other items in the bundle</Text>
-          <View className="rounded-lg border border-slate-200">
+          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Other items in the bundle</Text>
+          <View className="rounded-lg border border-slate-200 dark:border-slate-700">
             {otherItems.map((other) => (
               <CheckRow
                 key={other.id}
@@ -190,10 +190,10 @@ function CheckRow({
         size={22}
         color={checked ? BRAND_COLOR : '#94a3b8'}
       />
-      <Text numberOfLines={1} className="flex-1 text-sm text-slate-800">
+      <Text numberOfLines={1} className="flex-1 text-sm text-slate-800 dark:text-slate-200">
         {label}
       </Text>
-      {detail ? <Text className="text-xs text-slate-500">{detail}</Text> : null}
+      {detail ? <Text className="text-xs text-slate-500 dark:text-slate-400">{detail}</Text> : null}
     </Pressable>
   );
 }

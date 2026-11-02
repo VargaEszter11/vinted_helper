@@ -25,16 +25,16 @@ export function ModalSheet({
           className="flex-1 items-center justify-end bg-black/40 sm:justify-center sm:p-6"
           style={{ paddingTop: insets.top + 24 }}>
           <View
-            className="max-h-full w-full max-w-lg rounded-t-2xl bg-white sm:rounded-2xl"
+            className="max-h-full w-full max-w-lg rounded-t-2xl bg-white sm:rounded-2xl dark:bg-slate-900"
             style={{ paddingBottom: insets.bottom }}>
-            <View className="flex-row items-center justify-between border-b border-slate-200 py-2 pl-4 pr-2">
-              <Text className="text-lg font-semibold text-slate-900">{title}</Text>
+            <View className="flex-row items-center justify-between border-b border-slate-200 py-2 pl-4 pr-2 dark:border-slate-700">
+              <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</Text>
               <Pressable
                 onPress={onClose}
                 accessibilityRole="button"
                 accessibilityLabel="Close"
-                className="rounded-full p-2 active:bg-slate-100">
-                <Ionicons name="close" size={22} color="#475569" />
+                className="rounded-full p-2 active:bg-slate-100 dark:active:bg-slate-800">
+                <Ionicons name="close" size={22} color="#94a3b8" />
               </Pressable>
             </View>
             <ScrollView
@@ -43,7 +43,7 @@ export function ModalSheet({
               {children}
             </ScrollView>
             {footer ? (
-              <View className="flex-row items-center gap-2 border-t border-slate-200 p-4">
+              <View className="flex-row items-center gap-2 border-t border-slate-200 p-4 dark:border-slate-700">
                 {footer}
               </View>
             ) : null}

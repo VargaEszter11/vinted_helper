@@ -91,12 +91,12 @@ export function BundleModal({
         </>
       }>
       {formError ? <ErrorBanner message={formError} /> : null}
-      <View className="gap-1 rounded-lg border border-slate-200 p-3">
-        <Text className="text-sm font-medium text-slate-700">
+      <View className="gap-1 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">
           {formatItemCount(items.length)} · bought for {formatHuf(totalBought)} in total
         </Text>
         {items.map((item) => (
-          <Text key={item.id} numberOfLines={1} className="text-sm text-slate-600">
+          <Text key={item.id} numberOfLines={1} className="text-sm text-slate-600 dark:text-slate-300">
             • {item.name}
           </Text>
         ))}

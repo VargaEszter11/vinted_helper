@@ -81,10 +81,10 @@ export function MarkBundleSoldModal({
       }>
       {formError ? <ErrorBanner message={formError} /> : null}
       <View className="gap-0.5">
-        <Text className="text-base font-semibold text-slate-900">
+        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">
           Bundle of {formatItemCount(items.length)}
         </Text>
-        <Text className="text-sm text-slate-500" numberOfLines={2}>
+        <Text className="text-sm text-slate-500 dark:text-slate-400" numberOfLines={2}>
           {items.map((item) => item.name).join(', ')}
         </Text>
       </View>

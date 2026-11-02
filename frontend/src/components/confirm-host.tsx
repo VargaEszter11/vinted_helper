@@ -53,9 +53,9 @@ export function ConfirmHost() {
         />
         <View
           accessibilityRole="alert"
-          className="w-full max-w-sm gap-2 rounded-2xl bg-white p-5 shadow-lg">
-          <Text className="text-lg font-semibold text-slate-900">{request.title}</Text>
-          <Text className="text-sm text-slate-600">{request.message}</Text>
+          className="w-full max-w-sm gap-2 rounded-2xl bg-white p-5 shadow-lg dark:bg-slate-900">
+          <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">{request.title}</Text>
+          <Text className="text-sm text-slate-600 dark:text-slate-300">{request.message}</Text>
           <View className="mt-3 flex-row justify-end gap-2">
             <Button title="Cancel" variant="secondary" onPress={() => answer(false)} />
             <Button title={request.confirmLabel} variant="danger" onPress={() => answer(true)} />

@@ -309,30 +309,30 @@ export function ItemFormModal({
         />
       </View>
       <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700">Condition</Text>
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Condition</Text>
         <Chips options={CONDITION_OPTIONS} value={condition} onChange={setCondition} disabled={disabled} />
       </View>
       <View className="gap-1">
         <View className="flex-row items-center gap-2">
-          <Text className="text-sm font-medium text-slate-700">Category</Text>
+          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</Text>
           {suggestingCategory ? <ActivityIndicator size="small" color={BRAND_COLOR} /> : null}
         </View>
         <CategoryPicker value={category} onChange={changeCategory} disabled={disabled} />
         {categorySuggestError ? (
           <Text className="text-xs text-red-600">{categorySuggestError}</Text>
         ) : categoryLocked ? (
-          <Text className="text-xs text-slate-500">You chose this category — clear it to get a new suggestion.</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">You chose this category — clear it to get a new suggestion.</Text>
         ) : categoryFromAi ? (
-          <Text className="text-xs text-slate-500">
+          <Text className="text-xs text-slate-500 dark:text-slate-400">
             Picked automatically from your details{newPhotos.length > 0 || keptPhotos.length > 0 ? ' and photos' : ''}.
             Open the list to override.
           </Text>
         ) : suggestingCategory ? (
-          <Text className="text-xs text-slate-500">Finding a category…</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">Finding a category…</Text>
         ) : name.trim() === '' ? (
-          <Text className="text-xs text-slate-500">Add a name to get a category suggestion.</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">Add a name to get a category suggestion.</Text>
         ) : (
-          <Text className="text-xs text-slate-500">Updates when you change the description or photos.</Text>
+          <Text className="text-xs text-slate-500 dark:text-slate-400">Updates when you change the description or photos.</Text>
         )}
       </View>
       <View className="flex-row gap-3">
@@ -356,10 +356,10 @@ export function ItemFormModal({
         />
       </View>
       <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700">Status</Text>
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Status</Text>
         <Segmented options={STATUS_OPTIONS} value={status} onChange={changeStatus} disabled={disabled} />
         {item?.bundle_id && item.status === 'listed' && item.bundle_listed_for !== null ? (
-          <Text className="text-xs text-slate-500">
+          <Text className="text-xs text-slate-500 dark:text-slate-400">
             Part of a bundle listed for {formatHuf(item.bundle_listed_for)}. Setting it to In
             stock or Sold takes it out of the bundle.
           </Text>
@@ -414,17 +414,17 @@ export function ItemFormModal({
             className="self-start"
           />
           {showMore ? (
-            <View className="gap-2 rounded-lg border border-slate-200 p-3">
-              <Text className="text-sm font-medium text-slate-700">Status history</Text>
+            <View className="gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+              <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Status history</Text>
               {historyError ? (
                 <Text className="text-sm text-red-600">{historyError}</Text>
               ) : history === null ? (
-                <Text className="text-sm text-slate-500">Loading…</Text>
+                <Text className="text-sm text-slate-500 dark:text-slate-400">Loading…</Text>
               ) : (
                 history.map((change, index) => (
                   <View key={`${change.changed_at}-${index}`} className="flex-row items-center gap-3">
                     <StatusBadge status={change.status} />
-                    <Text className="text-sm text-slate-600">{formatDateTime(change.changed_at)}</Text>
+                    <Text className="text-sm text-slate-600 dark:text-slate-300">{formatDateTime(change.changed_at)}</Text>
                   </View>
                 ))
               )}

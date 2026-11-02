@@ -15,10 +15,10 @@ import {
 import { formatDateTime, formatHuf, parsePrice } from '@/lib/format';
 
 const VERDICT_STYLES: Record<Verdict | 'LOW_CONFIDENCE', { box: string; text: string; label: string }> = {
-  BUY: { box: 'bg-emerald-100 border-emerald-300', text: 'text-emerald-800', label: 'BUY' },
-  MAYBE: { box: 'bg-amber-100 border-amber-300', text: 'text-amber-800', label: 'MAYBE' },
-  SKIP: { box: 'bg-red-100 border-red-300', text: 'text-red-800', label: 'SKIP' },
-  LOW_CONFIDENCE: { box: 'bg-slate-100 border-slate-300', text: 'text-slate-700', label: 'LOW CONFIDENCE' },
+  BUY: { box: 'bg-emerald-100 border-emerald-300 dark:bg-emerald-950 dark:border-emerald-800', text: 'text-emerald-800 dark:text-emerald-200', label: 'BUY' },
+  MAYBE: { box: 'bg-amber-100 border-amber-300 dark:bg-amber-950 dark:border-amber-800', text: 'text-amber-800 dark:text-amber-200', label: 'MAYBE' },
+  SKIP: { box: 'bg-red-100 border-red-300 dark:bg-red-950 dark:border-red-800', text: 'text-red-800 dark:text-red-200', label: 'SKIP' },
+  LOW_CONFIDENCE: { box: 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-600', text: 'text-slate-700 dark:text-slate-200', label: 'LOW CONFIDENCE' },
 };
 
 const SOURCE_LABELS = {
@@ -59,9 +59,9 @@ export function PricesSection({
   const searchPhrase = item.search_phrase.trim() || [item.brand, item.item_type].filter(Boolean).join(' ');
 
   return (
-    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4">
-      <Text className="text-base font-semibold text-slate-900">Prices</Text>
-      <Text className="text-sm text-slate-600">
+    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+      <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">Prices</Text>
+      <Text className="text-sm text-slate-600 dark:text-slate-300">
         Looked up automatically for the details above: the web is searched for the new price and for
         second-hand listings (Vinted, Jófogás, eBay and others, whatever the search finds). The
         photos of the listings are compared with yours. When the item has a brand, only that brand
@@ -86,7 +86,7 @@ export function PricesSection({
         />
       </View>
 
-      {loading ? <Text className="text-sm text-slate-500">Searching. This can take up to a minute…</Text> : null}
+      {loading ? <Text className="text-sm text-slate-500 dark:text-slate-400">Searching. This can take up to a minute…</Text> : null}
       {error ? <ErrorBanner message={error} /> : null}
 
       {data && !loading ? (
@@ -121,7 +121,7 @@ function PricesResultView({
   return (
     <View className="gap-4">
       {data.cache ? (
-        <Text className="text-xs text-slate-500">
+        <Text className="text-xs text-slate-500 dark:text-slate-400">
           {data.cache.hit ? 'Saved result from ' : 'Searched at '}
           {formatDateTime(data.cache.fetched_at)}
           {data.cache.hit ? ' (results are kept for 24 hours)' : ''}
@@ -129,7 +129,7 @@ function PricesResultView({
       ) : null}
 
       {!web.available ? (
-        <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
           <Ionicons name="warning-outline" size={18} color="#b45309" />
           <Text className="flex-1 text-sm text-amber-800">
             {web.message ?? 'The price lookup is unavailable right now.'} Your own sales are still used below.
@@ -142,7 +142,7 @@ function PricesResultView({
           <Block title="New price (Hungarian shops)">
             {web.new_price ? (
               <>
-                <Text className="text-sm text-slate-800">
+                <Text className="text-sm text-slate-800 dark:text-slate-200">
                   {formatHuf(web.new_price.min)}
                   {web.new_price.max !== web.new_price.min ? ` – ${formatHuf(web.new_price.max)}` : ''}
                   {web.new_price.sources.length > 1 ? `  (median ${formatHuf(web.new_price.median)})` : ''}
@@ -158,7 +158,7 @@ function PricesResultView({
                 ))}
               </>
             ) : (
-              <Text className="text-sm text-slate-500">No new price found.</Text>
+              <Text className="text-sm text-slate-500 dark:text-slate-400">No new price found.</Text>
             )}
           </Block>
 
@@ -166,7 +166,7 @@ function PricesResultView({
             {web.used.listings.length > 0 ? (
               web.used.listings.map((listing) => <ListingRow key={listing.url} listing={listing} />)
             ) : (
-              <Text className="text-sm text-slate-500">
+              <Text className="text-sm text-slate-500 dark:text-slate-400">
                 No similar second-hand listings found in the web search. Try the Vinted.hu search button to
                 check by hand.
               </Text>
@@ -174,7 +174,7 @@ function PricesResultView({
             {web.used.dropped.length > 0 ? (
               <View className="gap-1">
                 <Pressable onPress={onToggleDropped} accessibilityRole="button" className="self-start py-1">
-                  <Text className="text-sm font-medium text-teal-700">
+                  <Text className="text-sm font-medium text-teal-700 dark:text-teal-300">
                     {showDropped ? 'Hide' : 'Show'} not used ({web.used.dropped.length})
                   </Text>
                 </Pressable>
@@ -186,20 +186,20 @@ function PricesResultView({
           </Block>
 
           {data.visual.compared > 0 ? (
-            <Text className="text-xs text-slate-500">
+            <Text className="text-xs text-slate-500 dark:text-slate-400">
               Listing photos compared with yours: {data.visual.compared}
               {data.visual.dropped > 0 ? `, ${data.visual.dropped} removed as a different item` : ''}.
             </Text>
           ) : null}
-          {data.visual.note ? <Text className="text-xs text-slate-500">{data.visual.note}</Text> : null}
-          {web.rates_note ? <Text className="text-xs text-slate-500">{web.rates_note}</Text> : null}
-          {web.note ? <Text className="text-xs text-slate-500">{web.note}</Text> : null}
+          {data.visual.note ? <Text className="text-xs text-slate-500 dark:text-slate-400">{data.visual.note}</Text> : null}
+          {web.rates_note ? <Text className="text-xs text-slate-500 dark:text-slate-400">{web.rates_note}</Text> : null}
+          {web.note ? <Text className="text-xs text-slate-500 dark:text-slate-400">{web.note}</Text> : null}
         </>
       ) : null}
 
       <Block title="Your own sales">
         {own.count > 0 ? (
-          <Text className="text-sm text-slate-800">
+          <Text className="text-sm text-slate-800 dark:text-slate-200">
             {own.count} similar sold ({own.match === 'brand_category' ? 'same brand and category' : 'same category'}),
             median {formatHuf(own.median_sold_for ?? 0)}
             {own.median_days_to_sell !== null
@@ -208,15 +208,15 @@ function PricesResultView({
             .
           </Text>
         ) : (
-          <Text className="text-sm text-slate-500">No similar sold items of yours.</Text>
+          <Text className="text-sm text-slate-500 dark:text-slate-400">No similar sold items of yours.</Text>
         )}
       </Block>
 
       <Block title="Verdict">
         <VerdictBadge verdict={verdict.verdict} leaning={verdict.leaning} />
-        <Text className="text-sm text-slate-700">{verdict.explanation}</Text>
+        <Text className="text-sm text-slate-700 dark:text-slate-300">{verdict.explanation}</Text>
         {verdict.estimate ? (
-          <Text className="text-xs text-slate-500">
+          <Text className="text-xs text-slate-500 dark:text-slate-400">
             Resale estimate {formatHuf(verdict.estimate.value)} from {SOURCE_LABELS[verdict.estimate.source]}; you pay{' '}
             {formatHuf(data.price)}; margin {formatHuf(verdict.margin ?? 0)}
             {verdict.margin_percent !== null ? ` (${verdict.margin_percent}%)` : ''}. BUY needs at least{' '}
@@ -244,9 +244,9 @@ function OverrideVerdict({ resale, data }: { resale: number; data: PricesResult 
   const verdict = classifyMargin(margin, data.price, data.thresholds);
   const percent = data.price > 0 ? ` (${Math.round((margin / data.price) * 100)}%)` : '';
   return (
-    <View className="gap-1 rounded-lg bg-slate-50 p-3">
+    <View className="gap-1 rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
       <VerdictBadge verdict={verdict} leaning={null} />
-      <Text className="text-sm text-slate-700">
+      <Text className="text-sm text-slate-700 dark:text-slate-300">
         With your resale price of {formatHuf(resale)} and {formatHuf(data.price)} to pay,{' '}
         {margin >= 0 ? `the margin is ${formatHuf(margin)}` : `you would lose ${formatHuf(-margin)}`}
         {percent}.
@@ -263,7 +263,7 @@ function VerdictBadge({ verdict, leaning }: { verdict: Verdict | 'LOW_CONFIDENCE
         <Text className={`text-base font-bold ${style.text}`}>{style.label}</Text>
       </View>
       {verdict === 'LOW_CONFIDENCE' && leaning ? (
-        <Text className="text-sm text-slate-500">leaning {leaning}</Text>
+        <Text className="text-sm text-slate-500 dark:text-slate-400">leaning {leaning}</Text>
       ) : null}
     </View>
   );
@@ -272,7 +272,7 @@ function VerdictBadge({ verdict, leaning }: { verdict: Verdict | 'LOW_CONFIDENCE
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View className="gap-2">
-      <Text className="text-sm font-semibold text-slate-800">{title}</Text>
+      <Text className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</Text>
       {children}
     </View>
   );
@@ -315,13 +315,13 @@ function LinkRow({
     <Pressable
       onPress={() => openLink(url)}
       accessibilityRole="link"
-      className="flex-row items-start gap-3 rounded-lg border border-slate-200 px-3 py-2 active:bg-slate-50">
+      className="flex-row items-start gap-3 rounded-lg border border-slate-200 px-3 py-2 active:bg-slate-50 dark:border-slate-700 dark:active:bg-slate-800">
       {image ? <Thumbnail uri={image} size={48} /> : null}
       <View className="flex-1 gap-0.5">
-        <Text numberOfLines={2} className={`text-sm font-medium ${muted ? 'text-slate-500' : 'text-teal-700'}`}>
+        <Text numberOfLines={2} className={`text-sm font-medium ${muted ? 'text-slate-500 dark:text-slate-400' : 'text-teal-700 dark:text-teal-300'}`}>
           {title}
         </Text>
-        {detail ? <Text className="text-xs text-slate-500">{detail}</Text> : null}
+        {detail ? <Text className="text-xs text-slate-500 dark:text-slate-400">{detail}</Text> : null}
         {badge ? (
           <View className="self-start rounded-full bg-emerald-100 px-2 py-0.5">
             <Text className="text-xs font-medium text-emerald-800">{badge}</Text>

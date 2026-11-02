@@ -63,11 +63,13 @@ export function CategoryFilterSelect({
         accessibilityRole="button"
         accessibilityLabel="Filter by category"
         className={`flex-row items-center gap-1 rounded-lg border px-3 py-2 ${
-          active ? 'border-teal-700 bg-teal-50' : 'border-slate-300 bg-white active:bg-slate-100'
+          active
+            ? 'border-teal-700 bg-teal-50 dark:bg-teal-950'
+            : 'border-slate-300 bg-white active:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:active:bg-slate-800'
         }`}>
         <Text
           numberOfLines={1}
-          className={`max-w-[140px] text-sm ${active ? 'font-semibold text-teal-800' : 'text-slate-700'}`}>
+          className={`max-w-[140px] text-sm ${active ? 'font-semibold text-teal-800 dark:text-teal-200' : 'text-slate-700 dark:text-slate-200'}`}>
           {selectedLabel ?? 'Category'}
         </Text>
         <Ionicons name="chevron-down" size={14} color={active ? BRAND_COLOR : '#64748b'} />
@@ -82,15 +84,15 @@ export function CategoryFilterSelect({
             onPress={close}
           />
           <View
-            className="w-full max-w-lg overflow-hidden rounded-2xl bg-white"
+            className="w-full max-w-lg overflow-hidden rounded-2xl bg-white dark:bg-slate-900"
             style={Platform.OS === 'web' ? { boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18)' } : undefined}>
-            <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3">
-              <Text className="text-base font-semibold text-slate-900">Category</Text>
-              <Pressable onPress={close} accessibilityLabel="Close" className="rounded-full p-1.5 active:bg-slate-100">
+            <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">Category</Text>
+              <Pressable onPress={close} accessibilityLabel="Close" className="rounded-full p-1.5 active:bg-slate-100 dark:active:bg-slate-800">
                 <Ionicons name="close" size={20} color="#475569" />
               </Pressable>
             </View>
-            <View className="border-b border-slate-100 px-4 py-3">
+            <View className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
               <SearchField
                 value={query}
                 onChangeText={setQuery}
@@ -104,8 +106,8 @@ export function CategoryFilterSelect({
                 onChange(null);
                 close();
               }}
-              className="border-b border-slate-100 px-4 py-2.5 active:bg-slate-50">
-              <Text className="text-sm text-slate-600">All categories</Text>
+              className="border-b border-slate-100 px-4 py-2.5 active:bg-slate-50 dark:border-slate-800 dark:active:bg-slate-800">
+              <Text className="text-sm text-slate-600 dark:text-slate-300">All categories</Text>
             </Pressable>
             <FlatList
               data={results}
@@ -113,17 +115,17 @@ export function CategoryFilterSelect({
               keyboardShouldPersistTaps="handled"
               style={{ maxHeight: LIST_MAX_HEIGHT }}
               ListEmptyComponent={
-                <Text className="px-4 py-6 text-center text-sm text-slate-500">No categories match.</Text>
+                <Text className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">No categories match.</Text>
               }
               renderItem={({ item }) => {
                 const selected = item.value === value;
                 return (
                   <Pressable
                     onPress={() => choose(item.value)}
-                    className={`border-b border-slate-50 px-4 py-2.5 ${selected ? 'bg-teal-50' : 'active:bg-slate-50'}`}>
+                    className={`border-b border-slate-50 px-4 py-2.5 dark:border-slate-800 ${selected ? 'bg-teal-50 dark:bg-teal-950' : 'active:bg-slate-50 dark:active:bg-slate-800'}`}>
                     <Text
                       numberOfLines={2}
-                      className={`text-sm leading-snug ${selected ? 'font-semibold text-teal-900' : 'text-slate-800'}`}>
+                      className={`text-sm leading-snug ${selected ? 'font-semibold text-teal-900 dark:text-teal-100' : 'text-slate-800 dark:text-slate-200'}`}>
                       {item.label}
                     </Text>
                   </Pressable>
@@ -171,12 +173,14 @@ export function CategoryPicker({
         accessibilityRole="button"
         accessibilityLabel="Choose category"
         className={`flex-row items-center gap-2 rounded-lg border px-3 py-2.5 ${
-          selected ? 'border-teal-700 bg-teal-50' : 'border-slate-300 bg-white active:bg-slate-100'
+          selected
+            ? 'border-teal-700 bg-teal-50 dark:bg-teal-950'
+            : 'border-slate-300 bg-white active:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:active:bg-slate-800'
         } ${disabled ? 'opacity-50' : ''}`}>
         <Ionicons name="folder-outline" size={18} color={selected ? BRAND_COLOR : '#64748b'} />
         <Text
           numberOfLines={2}
-          className={`flex-1 text-sm ${selected ? 'font-medium text-teal-900' : 'text-slate-600'}`}>
+          className={`flex-1 text-sm ${selected ? 'font-medium text-teal-900 dark:text-teal-100' : 'text-slate-600 dark:text-slate-300'}`}>
           {selected ? selected.path : 'Choose a Vinted category'}
         </Text>
         <Ionicons name="chevron-down" size={16} color="#64748b" />
@@ -191,15 +195,15 @@ export function CategoryPicker({
             onPress={close}
           />
           <View
-            className="w-full max-w-lg overflow-hidden rounded-2xl bg-white"
+            className="w-full max-w-lg overflow-hidden rounded-2xl bg-white dark:bg-slate-900"
             style={Platform.OS === 'web' ? { boxShadow: '0 16px 40px rgba(0, 0, 0, 0.18)' } : undefined}>
-            <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3">
-              <Text className="text-base font-semibold text-slate-900">Choose category</Text>
-              <Pressable onPress={close} accessibilityLabel="Close" className="rounded-full p-1.5 active:bg-slate-100">
+            <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">Choose category</Text>
+              <Pressable onPress={close} accessibilityLabel="Close" className="rounded-full p-1.5 active:bg-slate-100 dark:active:bg-slate-800">
                 <Ionicons name="close" size={20} color="#475569" />
               </Pressable>
             </View>
-            <View className="border-b border-slate-100 px-4 py-3">
+            <View className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
               <SearchField
                 value={query}
                 onChangeText={setQuery}
@@ -212,8 +216,8 @@ export function CategoryPicker({
                   onChange(null);
                   close();
                 }}
-                className="border-b border-slate-100 px-4 py-2.5 active:bg-slate-50">
-                <Text className="text-sm text-slate-600">Clear category</Text>
+                className="border-b border-slate-100 px-4 py-2.5 active:bg-slate-50 dark:border-slate-800 dark:active:bg-slate-800">
+                <Text className="text-sm text-slate-600 dark:text-slate-300">Clear category</Text>
               </Pressable>
             ) : null}
             <FlatList
@@ -222,17 +226,17 @@ export function CategoryPicker({
               keyboardShouldPersistTaps="handled"
               style={{ maxHeight: LIST_MAX_HEIGHT }}
               ListEmptyComponent={
-                <Text className="px-4 py-6 text-center text-sm text-slate-500">No categories match.</Text>
+                <Text className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">No categories match.</Text>
               }
               renderItem={({ item }) => {
                 const active = item.id === value;
                 return (
                   <Pressable
                     onPress={() => choose(item)}
-                    className={`border-b border-slate-50 px-4 py-2.5 ${active ? 'bg-teal-50' : 'active:bg-slate-50'}`}>
+                    className={`border-b border-slate-50 px-4 py-2.5 dark:border-slate-800 ${active ? 'bg-teal-50 dark:bg-teal-950' : 'active:bg-slate-50 dark:active:bg-slate-800'}`}>
                     <Text
                       numberOfLines={2}
-                      className={`text-sm leading-snug ${active ? 'font-semibold text-teal-900' : 'text-slate-800'}`}>
+                      className={`text-sm leading-snug ${active ? 'font-semibold text-teal-900 dark:text-teal-100' : 'text-slate-800 dark:text-slate-200'}`}>
                       {item.path}
                     </Text>
                   </Pressable>

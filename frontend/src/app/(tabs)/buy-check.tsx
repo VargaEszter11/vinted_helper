@@ -145,18 +145,18 @@ export default function BuyCheckScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-slate-50"
+      className="flex-1 bg-slate-50 dark:bg-slate-950"
       contentContainerClassName="items-center p-4"
       keyboardShouldPersistTaps="handled">
       <View className="w-full max-w-xl gap-4">
         {error ? <ErrorBanner message={error} /> : null}
 
         <View className="gap-2">
-          <Text className="text-sm font-medium text-slate-700">
+          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Photos ({photos.length}/{MAX_BUY_CHECK_PHOTOS})
           </Text>
           {photos.length === 0 && !picking ? (
-            <Text className="text-sm text-slate-500">
+            <Text className="text-sm text-slate-500 dark:text-slate-400">
               Add up to {MAX_BUY_CHECK_PHOTOS} photos. Include the tag or label if you can.
             </Text>
           ) : (
@@ -172,7 +172,7 @@ export default function BuyCheckScreen() {
               {picking ? (
                 <View
                   style={{ width: TILE_SIZE, height: TILE_SIZE }}
-                  className="items-center justify-center rounded-lg bg-slate-100">
+                  className="items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
                   <ActivityIndicator color={BRAND_COLOR} />
                 </View>
               ) : null}
@@ -208,8 +208,8 @@ export default function BuyCheckScreen() {
           editable={!checking}
         />
 
-        <View className="gap-3 rounded-xl border border-slate-200 bg-white p-3">
-          <Text className="text-sm font-medium text-slate-700">
+        <View className="gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Details you already know (optional)
           </Text>
           <View className="flex-row gap-3">
@@ -224,7 +224,7 @@ export default function BuyCheckScreen() {
             editable={!checking}
           />
           <View className="gap-1">
-            <Text className="text-sm font-medium text-slate-700">Condition</Text>
+            <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Condition</Text>
             <Chips
               options={CONDITION_OPTIONS}
               value={condition}
@@ -248,7 +248,7 @@ export default function BuyCheckScreen() {
         </View>
 
         {checking ? (
-          <Text className="text-sm text-slate-500">Looking at your photos. This takes a few seconds…</Text>
+          <Text className="text-sm text-slate-500 dark:text-slate-400">Looking at your photos. This takes a few seconds…</Text>
         ) : null}
 
         {result && edits && !checking ? (
@@ -289,16 +289,16 @@ function ResultCard({
   };
 
   return (
-    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4">
+    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
       <View className="flex-row flex-wrap items-center justify-between gap-2">
-        <Text className="text-base font-semibold text-slate-900">Result</Text>
-        <Text className="text-sm text-slate-600">
+        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">Result</Text>
+        <Text className="text-sm text-slate-600 dark:text-slate-300">
           Confidence: <Text className="font-semibold">{CONFIDENCE_LABELS[result.confidence]}</Text>
         </Text>
       </View>
 
       {result.confidence === 'low' ? (
-        <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
           <Ionicons name="warning-outline" size={18} color="#b45309" />
           <Text className="flex-1 text-sm text-amber-800">
             Check these details. The AI was not sure, so correct anything that is wrong.
@@ -306,9 +306,9 @@ function ResultCard({
         </View>
       ) : null}
 
-      <View className="flex-row items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-        <Text className="text-sm text-slate-600">Your price</Text>
-        <Text className="text-base font-semibold text-slate-900">{formatHuf(result.price)}</Text>
+      <View className="flex-row items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <Text className="text-sm text-slate-600 dark:text-slate-300">Your price</Text>
+        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{formatHuf(result.price)}</Text>
       </View>
 
       {TEXT_FIELDS.slice(0, 1).map(({ key, label }) => (
@@ -316,13 +316,13 @@ function ResultCard({
       ))}
 
       <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700">Category</Text>
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Category</Text>
         <Chips
           options={CATEGORY_OPTIONS}
           value={edits.category || null}
           onChange={(value) => onEdit('category', value ?? '')}
         />
-        <Text className="text-xs text-slate-500">{hint('category')}</Text>
+        <Text className="text-xs text-slate-500 dark:text-slate-400">{hint('category')}</Text>
       </View>
 
       {TEXT_FIELDS.slice(1).map(({ key, label }) => (
@@ -330,13 +330,13 @@ function ResultCard({
       ))}
 
       <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700">Condition</Text>
+        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Condition</Text>
         <Chips
           options={CONDITION_OPTIONS}
           value={edits.condition || null}
           onChange={(value) => onEdit('condition', value ?? '')}
         />
-        <Text className="text-xs text-slate-500">{hint('condition')}</Text>
+        <Text className="text-xs text-slate-500 dark:text-slate-400">{hint('condition')}</Text>
       </View>
     </View>
   );

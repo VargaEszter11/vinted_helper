@@ -160,18 +160,18 @@ export default function ItemsScreen() {
         onPress={() => (selecting ? toggleSelected(item.id) : setEditing(item))}
         disabled={dimmed}
         style={dimmed ? { opacity: 0.4 } : undefined}
-        className={`flex-row items-center border-b border-slate-100 py-2.5 active:bg-slate-50 ${
-          isSelected ? 'bg-teal-50' : 'bg-white'
+        className={`flex-row items-center border-b border-slate-100 py-2.5 active:bg-slate-50 dark:border-slate-800 dark:active:bg-slate-800 ${
+          isSelected ? 'bg-teal-50 dark:bg-teal-950' : 'bg-white dark:bg-slate-900'
         } ${inBundle ? 'border-l-4 border-l-teal-300' : ''} ${rowClass}`}>
         <Thumbnail uri={thumbnailFor(item)} size={thumbSize} />
         <View className="flex-1 gap-1">
-          <Text numberOfLines={2} className="text-sm font-medium text-slate-900">
+          <Text numberOfLines={2} className="text-sm font-medium text-slate-900 dark:text-slate-100">
             {item.name}
           </Text>
           {wide ? null : (
             <View className="flex-row items-center gap-1.5">
               <StatusBadge status={item.status} />
-              <Text className="text-xs text-slate-500">{item.status_changed_at.slice(0, 10)}</Text>
+              <Text className="text-xs text-slate-500 dark:text-slate-400">{item.status_changed_at.slice(0, 10)}</Text>
             </View>
           )}
         </View>
@@ -180,7 +180,7 @@ export default function ItemsScreen() {
         {wide ? (
           <View className="w-24 gap-0.5">
             <StatusBadge status={item.status} />
-            <Text className="text-xs text-slate-500">{item.status_changed_at.slice(0, 10)}</Text>
+            <Text className="text-xs text-slate-500 dark:text-slate-400">{item.status_changed_at.slice(0, 10)}</Text>
           </View>
         ) : null}
         <View className={`items-center ${actionClass}`}>
@@ -215,26 +215,26 @@ export default function ItemsScreen() {
         accessibilityLabel={`Bundle of ${formatItemCount(bundle.items.length)}`}
         disabled={selecting}
         style={selecting ? { opacity: 0.4 } : undefined}
-        className={`flex-row items-center border-b border-l-4 border-slate-100 border-l-teal-600 bg-teal-50 py-2.5 active:bg-teal-100 ${rowClass}`}>
+        className={`flex-row items-center border-b border-l-4 border-slate-100 border-l-teal-600 bg-teal-50 py-2.5 active:bg-teal-100 dark:border-slate-800 dark:bg-teal-950 dark:active:bg-teal-900 ${rowClass}`}>
         <View
           style={{ width: thumbSize, height: thumbSize }}
-          className="items-center justify-center rounded-lg bg-teal-100">
+          className="items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900">
           <Ionicons name="albums-outline" size={thumbSize * 0.5} color={BRAND_COLOR} />
         </View>
         <View className="flex-1 gap-1">
-          <Text numberOfLines={1} className="text-sm font-semibold text-slate-900">
+          <Text numberOfLines={1} className="text-sm font-semibold text-slate-900 dark:text-slate-100">
             Bundle
           </Text>
           <View className="flex-row items-center gap-1.5">
             {wide ? null : <StatusBadge status="listed" />}
-            <Text className="text-xs text-slate-500">{formatItemCount(bundle.items.length)}</Text>
+            <Text className="text-xs text-slate-500 dark:text-slate-400">{formatItemCount(bundle.items.length)}</Text>
           </View>
         </View>
         <Money value={totalBought} className={moneyClass} />
         <Money
           value={bundle.items[0]?.bundle_listed_for ?? null}
           className={`font-semibold ${moneyClass}`}
-          textClassName="text-slate-900"
+          textClassName="text-slate-900 dark:text-slate-100"
         />
         {wide ? (
           <View className="w-24">
@@ -259,11 +259,11 @@ export default function ItemsScreen() {
   const selectedItems = items.filter((item) => selected?.includes(item.id));
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       <View className="w-full max-w-5xl flex-1 self-center">
         {selecting ? (
           <View className="flex-row flex-wrap items-center gap-3 px-3 pt-3">
-            <Text className="min-w-[160px] flex-1 text-sm text-slate-700">
+            <Text className="min-w-[160px] flex-1 text-sm text-slate-700 dark:text-slate-200">
               Tap the items you listed together.
             </Text>
             <View className="flex-row gap-2">
@@ -345,7 +345,7 @@ export default function ItemsScreen() {
           </View>
         ) : null}
 
-        <View className={`flex-row items-center border-b border-slate-200 py-2 ${rowClass}`}>
+        <View className={`flex-row items-center border-b border-slate-200 py-2 dark:border-slate-800 ${rowClass}`}>
           <View style={{ width: thumbSize }} />
           <HeaderText className="flex-1">Name</HeaderText>
           <HeaderText className={`text-right ${moneyClass}`}>Bought</HeaderText>
@@ -385,8 +385,8 @@ export default function ItemsScreen() {
         )}
 
         {!loading && items.length > 0 ? (
-          <View className={`border-t border-slate-200 bg-white py-3 ${rowClass}`}>
-            <Text className="text-sm font-medium text-slate-700">
+          <View className={`border-t border-slate-200 bg-white py-3 dark:border-slate-800 dark:bg-slate-900 ${rowClass}`}>
+            <Text className="text-sm font-medium text-slate-700 dark:text-slate-200">
               {filter === 'all' && !searching && !filtering
                 ? formatItemCount(items.length)
                 : `${visibleItems.length} of ${formatItemCount(items.length)}`}

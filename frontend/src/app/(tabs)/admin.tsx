@@ -71,9 +71,9 @@ export default function AdminScreen() {
 
   if (imported) {
     return (
-      <View className="flex-1 items-center justify-center gap-3 bg-slate-50 p-6">
-        <Text className="text-lg font-semibold text-slate-900">Import finished</Text>
-        <Text className="max-w-md text-center text-sm text-slate-600">
+      <View className="flex-1 items-center justify-center gap-3 bg-slate-50 p-6 dark:bg-slate-950">
+        <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">Import finished</Text>
+        <Text className="max-w-md text-center text-sm text-slate-600 dark:text-slate-300">
           Imported {imported.users} accounts, {imported.items} items, {imported.bundles} bundles and{' '}
           {imported.photos} photos. Accounts and passwords now come from the file, so sign in again.
         </Text>
@@ -83,12 +83,12 @@ export default function AdminScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-slate-50" contentContainerClassName="items-center p-4">
+    <ScrollView className="flex-1 bg-slate-50 dark:bg-slate-950" contentContainerClassName="items-center p-4">
       <View className="w-full max-w-xl gap-4">
         {error ? <ErrorBanner message={error} /> : null}
 
         {stats ? (
-          <Text className="text-sm text-slate-600">
+          <Text className="text-sm text-slate-600 dark:text-slate-300">
             This server has {stats.users} accounts, {stats.items} items, {stats.bundles} bundles and{' '}
             {stats.photos} photos.
           </Text>
@@ -119,7 +119,7 @@ export default function AdminScreen() {
               className="self-start"
             />
           ) : (
-            <Text className="text-sm text-slate-500">
+            <Text className="text-sm text-slate-500 dark:text-slate-400">
               Importing needs a file picker, so open the web version of the app to do it.
             </Text>
           )}
@@ -139,10 +139,10 @@ function Card({
   children: ReactNode;
 }) {
   return (
-    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4">
+    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
       <View className="gap-1">
-        <Text className="text-base font-semibold text-slate-900">{title}</Text>
-        <Text className="text-sm text-slate-600">{description}</Text>
+        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</Text>
+        <Text className="text-sm text-slate-600 dark:text-slate-300">{description}</Text>
       </View>
       {children}
     </View>

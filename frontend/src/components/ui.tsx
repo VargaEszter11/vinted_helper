@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { formatHuf } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 import type { ItemCondition, ItemStatus } from '@/lib/types';
 
 export const BRAND_COLOR = '#0f766e';
@@ -23,9 +24,9 @@ const NO_BROWSER_OUTLINE = { outlineStyle: 'none' } as unknown as ComponentProps
 >['style'];
 
 /** Teal border and glow while focused, matching the search field. Red wins when the value is invalid. */
-function focusFrame(focused: boolean, error = false) {
+function focusFrame(focused: boolean, error = false, dark = false) {
   return {
-    borderColor: error ? '#ef4444' : focused ? BRAND_COLOR : '#cbd5e1',
+    borderColor: error ? '#ef4444' : focused ? BRAND_COLOR : dark ? '#475569' : '#cbd5e1',
     boxShadow: focused && !error ? '0 0 0 3px rgba(15, 118, 110, 0.25)' : undefined,
   };
 }
@@ -40,13 +41,13 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-ghos
 const BUTTON_VARIANTS: Record<ButtonVariant, { box: string; text: string; tint: string }> = {
   primary: { box: 'bg-teal-700 active:bg-teal-800', text: 'text-white', tint: '#ffffff' },
   secondary: {
-    box: 'border border-slate-300 bg-white active:bg-slate-100',
-    text: 'text-slate-800',
+    box: 'border border-slate-300 bg-white active:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:active:bg-slate-800',
+    text: 'text-slate-800 dark:text-slate-100',
     tint: BRAND_COLOR,
   },
-  ghost: { box: 'active:bg-slate-100', text: 'text-teal-700', tint: BRAND_COLOR },
+  ghost: { box: 'active:bg-slate-100 dark:active:bg-slate-800', text: 'text-teal-700 dark:text-teal-300', tint: BRAND_COLOR },
   danger: { box: 'bg-red-600 active:bg-red-700', text: 'text-white', tint: '#ffffff' },
-  'danger-ghost': { box: 'active:bg-red-50', text: 'text-red-600', tint: '#dc2626' },
+  'danger-ghost': { box: 'active:bg-red-50 dark:active:bg-red-950', text: 'text-red-600 dark:text-red-400', tint: '#dc2626' },
 };
 
 export function Button({
@@ -103,14 +104,16 @@ export function Field({
   ...inputProps
 }: TextInputProps & { label: string; error?: string; hint?: string; className?: string }) {
   const [focused, setFocused] = useState(false);
+  const { theme } = useTheme();
+  const dark = theme === 'dark';
   return (
     <View className={`gap-1 ${className}`}>
-      <Text className="text-sm font-medium text-slate-700">{label}</Text>
+      <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</Text>
       <TextInput
         accessibilityLabel={label}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={dark ? '#64748b' : '#94a3b8'}
         selectionColor={BRAND_COLOR}
-        className="rounded-lg border bg-white px-3 py-2.5 text-base text-slate-900"
+        className="rounded-lg border bg-white px-3 py-2.5 text-base text-slate-900 dark:bg-slate-900 dark:text-slate-100"
         {...inputProps}
         onFocus={(event) => {
           setFocused(true);
@@ -121,12 +124,12 @@ export function Field({
           onBlur?.(event);
         }}
         // Border color stays in `style`: swapping it through classes remounts the field on native.
-        style={[NO_BROWSER_OUTLINE, style, focusFrame(focused, Boolean(error))]}
+        style={[NO_BROWSER_OUTLINE, style, focusFrame(focused, Boolean(error), dark)]}
       />
       {error ? (
-        <Text className="text-xs text-red-600">{error}</Text>
+        <Text className="text-xs text-red-600 dark:text-red-400">{error}</Text>
       ) : hint ? (
-        <Text className="text-xs text-slate-500">{hint}</Text>
+        <Text className="text-xs text-slate-500 dark:text-slate-400">{hint}</Text>
       ) : null}
     </View>
   );
@@ -146,17 +149,19 @@ export function SearchField({
   placeholder?: string;
 }) {
   const [focused, setFocused] = useState(false);
+  const { theme } = useTheme();
+  const dark = theme === 'dark';
   return (
     <View
-      className="w-full flex-row items-center gap-2 rounded-lg border bg-white px-3"
+      className="w-full flex-row items-center gap-2 rounded-lg border bg-white px-3 dark:bg-slate-900"
       // Border color stays in `style`: swapping it through classes remounts the field on native.
-      style={focusFrame(focused)}>
+      style={focusFrame(focused, false, dark)}>
       <Ionicons name="search-outline" size={18} color={focused ? BRAND_COLOR : '#94a3b8'} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={dark ? '#64748b' : '#94a3b8'}
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"
@@ -166,7 +171,7 @@ export function SearchField({
         accessibilityLabel="Search items"
         // Inline, so it beats the browser's default blue focus ring.
         style={NO_BROWSER_OUTLINE}
-        className="flex-1 py-2.5 text-base text-slate-900"
+        className="flex-1 py-2.5 text-base text-slate-900 dark:text-slate-100"
       />
       {value ? (
         <Pressable
@@ -186,6 +191,11 @@ const SEGMENT_SELECTED_STYLE = {
   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
 } as const;
 
+const SEGMENT_SELECTED_STYLE_DARK = {
+  backgroundColor: '#475569',
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.45)',
+} as const;
+
 export function Segmented<T extends string>({
   options,
   value,
@@ -197,8 +207,9 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
   disabled?: boolean;
 }) {
+  const { theme } = useTheme();
   return (
-    <View className="flex-row rounded-lg bg-slate-200 p-1">
+    <View className="flex-row rounded-lg bg-slate-200 p-1 dark:bg-slate-950">
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -210,11 +221,17 @@ export function Segmented<T extends string>({
             accessibilityState={{ selected }}
             // The selected look goes in `style`: adding bg/shadow classes after the first render
             // makes NativeWind remount the component on iOS/Android, which crashes in dev.
-            style={selected ? SEGMENT_SELECTED_STYLE : undefined}
+            style={
+              selected ? (theme === 'dark' ? SEGMENT_SELECTED_STYLE_DARK : SEGMENT_SELECTED_STYLE) : undefined
+            }
             className="flex-1 items-center rounded-md px-1 py-1.5">
             <Text
               numberOfLines={1}
-              className={`text-sm ${selected ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>
+              className={`text-sm ${
+                selected
+                  ? 'font-semibold text-slate-900 dark:text-slate-100'
+                  : 'text-slate-600 dark:text-slate-300'
+              }`}>
               {option.label}
             </Text>
           </Pressable>
@@ -231,9 +248,9 @@ export const STATUS_LABELS: Record<ItemStatus, string> = {
 };
 
 const STATUS_STYLES: Record<ItemStatus, { box: string; text: string }> = {
-  in_stock: { box: 'bg-slate-100', text: 'text-slate-700' },
-  listed: { box: 'bg-sky-100', text: 'text-sky-800' },
-  sold: { box: 'bg-emerald-100', text: 'text-emerald-800' },
+  in_stock: { box: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-200' },
+  listed: { box: 'bg-sky-100 dark:bg-sky-950', text: 'text-sky-800 dark:text-sky-200' },
+  sold: { box: 'bg-emerald-100 dark:bg-emerald-950', text: 'text-emerald-800 dark:text-emerald-200' },
 };
 
 export function StatusBadge({ status }: { status: ItemStatus }) {
@@ -280,9 +297,11 @@ export function Chips<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected }}
             className={`rounded-full border px-3 py-1.5 ${
-              selected ? 'border-teal-700 bg-teal-700' : 'border-slate-300 bg-white active:bg-slate-100'
+              selected
+                ? 'border-teal-700 bg-teal-700'
+                : 'border-slate-300 bg-white active:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:active:bg-slate-800'
             } ${disabled ? 'opacity-50' : ''}`}>
-            <Text className={`text-sm font-medium ${selected ? 'text-white' : 'text-slate-700'}`}>
+            <Text className={`text-sm font-medium ${selected ? 'text-white' : 'text-slate-700 dark:text-slate-200'}`}>
               {option.label}
             </Text>
           </Pressable>
@@ -331,11 +350,15 @@ export function FilterSelect<T extends string>({
         accessibilityRole="button"
         accessibilityLabel={keepButtonLabel ? `Sort by ${label}` : `Filter by ${label}`}
         className={`flex-row items-center gap-1 rounded-lg border px-3 py-2 ${
-          active ? 'border-teal-700 bg-teal-50' : 'border-slate-300 bg-white active:bg-slate-100'
+          active
+            ? 'border-teal-700 bg-teal-50 dark:bg-teal-950'
+            : 'border-slate-300 bg-white active:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:active:bg-slate-800'
         }`}>
         <Text
           numberOfLines={1}
-          className={`max-w-[120px] text-sm ${active ? 'font-semibold text-teal-800' : 'text-slate-700'}`}>
+          className={`max-w-[120px] text-sm ${
+            active ? 'font-semibold text-teal-800 dark:text-teal-200' : 'text-slate-700 dark:text-slate-200'
+          }`}>
           {keepButtonLabel ? label : (selectedLabel ?? label)}
         </Text>
         <Ionicons name="chevron-down" size={14} color={active ? BRAND_COLOR : '#64748b'} />
@@ -347,15 +370,15 @@ export function FilterSelect<T extends string>({
           accessibilityRole="button"
           accessibilityLabel="Close">
           {/* Stops the tap from reaching the backdrop above and closing the popup. */}
-          <Pressable className="max-h-[70%] w-full max-w-xs rounded-xl bg-white">
-            <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3">
-              <Text className="text-base font-semibold text-slate-900">{label}</Text>
+          <Pressable className="max-h-[70%] w-full max-w-xs rounded-xl bg-white dark:bg-slate-900">
+            <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{label}</Text>
               <Pressable
                 onPress={() => setOpen(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Close"
-                className="rounded-full p-1 active:bg-slate-100">
-                <Ionicons name="close" size={20} color="#475569" />
+                className="rounded-full p-1 active:bg-slate-100 dark:active:bg-slate-800">
+                <Ionicons name="close" size={20} color="#94a3b8" />
               </Pressable>
             </View>
             <ScrollView contentContainerClassName="p-2">
@@ -397,11 +420,13 @@ function FilterOption({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       className={`flex-row items-center justify-between rounded-lg px-3 py-2.5 ${
-        selected ? 'bg-teal-50' : 'active:bg-slate-100'
+        selected ? 'bg-teal-50 dark:bg-teal-950' : 'active:bg-slate-100 dark:active:bg-slate-800'
       }`}>
       <Text
         numberOfLines={1}
-        className={`flex-1 text-sm ${selected ? 'font-semibold text-teal-800' : 'text-slate-700'}`}>
+        className={`flex-1 text-sm ${
+          selected ? 'font-semibold text-teal-800 dark:text-teal-200' : 'text-slate-700 dark:text-slate-200'
+        }`}>
         {label}
       </Text>
       {selected ? <Ionicons name="checkmark" size={18} color={BRAND_COLOR} /> : null}
@@ -412,7 +437,7 @@ function FilterOption({
 export function Money({
   value,
   className = '',
-  textClassName = 'text-slate-700',
+  textClassName = 'text-slate-700 dark:text-slate-300',
 }: {
   value: number | null;
   className?: string;
@@ -429,21 +454,21 @@ export function HeaderText({ children, className }: { children: string; classNam
   return (
     <Text
       numberOfLines={1}
-      className={`text-xs font-semibold uppercase tracking-wide text-slate-500 ${className}`}>
+      className={`text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${className}`}>
       {children}
     </Text>
   );
 }
 
 export function profitColor(profit: number): string {
-  if (profit > 0) return 'text-emerald-700';
-  if (profit < 0) return 'text-red-600';
-  return 'text-slate-700';
+  if (profit > 0) return 'text-emerald-700 dark:text-emerald-400';
+  if (profit < 0) return 'text-red-600 dark:text-red-400';
+  return 'text-slate-700 dark:text-slate-300';
 }
 
 export function CenteredSpinner() {
   return (
-    <View className="flex-1 items-center justify-center bg-slate-50">
+    <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
       <ActivityIndicator size="large" color={BRAND_COLOR} />
     </View>
   );
@@ -453,10 +478,10 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
   return (
     <View className="flex-1 items-center justify-center gap-3 p-6">
       <Ionicons name="cloud-offline-outline" size={36} color="#64748b" />
-      <Text className="text-center text-base font-semibold text-slate-800">
+      <Text className="text-center text-base font-semibold text-slate-800 dark:text-slate-100">
         Could not load your items
       </Text>
-      <Text className="text-center text-sm text-slate-500">{message}</Text>
+      <Text className="text-center text-sm text-slate-500 dark:text-slate-400">{message}</Text>
       <Button title="Try again" variant="secondary" onPress={onRetry} />
     </View>
   );
@@ -464,9 +489,9 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
 
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <View className="flex-row items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+    <View className="flex-row items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950">
       <Ionicons name="alert-circle-outline" size={18} color="#dc2626" />
-      <Text className="flex-1 text-sm text-red-700">{message}</Text>
+      <Text className="flex-1 text-sm text-red-700 dark:text-red-300">{message}</Text>
     </View>
   );
 }
@@ -475,8 +500,8 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
   return (
     <View className="items-center gap-2 px-6 py-16">
       <Ionicons name="file-tray-outline" size={36} color="#94a3b8" />
-      <Text className="text-center text-base font-semibold text-slate-700">{title}</Text>
-      {children ? <Text className="text-center text-sm text-slate-500">{children}</Text> : null}
+      <Text className="text-center text-base font-semibold text-slate-700 dark:text-slate-200">{title}</Text>
+      {children ? <Text className="text-center text-sm text-slate-500 dark:text-slate-400">{children}</Text> : null}
     </View>
   );
 }

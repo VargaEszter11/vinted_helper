@@ -47,9 +47,9 @@ export function PhotoPicker({
 
   return (
     <View className="gap-2">
-      <Text className="text-sm font-medium text-slate-700">Photos</Text>
+      <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">Photos</Text>
       {isEmpty ? (
-        <Text className="text-sm text-slate-500">No photos yet.</Text>
+        <Text className="text-sm text-slate-500 dark:text-slate-400">No photos yet.</Text>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
           {existing.map((photo) => (
@@ -71,7 +71,7 @@ export function PhotoPicker({
           {processing ? (
             <View
               style={{ width: TILE_SIZE, height: TILE_SIZE }}
-              className="items-center justify-center rounded-lg bg-slate-100">
+              className="items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
               <ActivityIndicator color={BRAND_COLOR} />
             </View>
           ) : null}

@@ -80,7 +80,7 @@ export default function SoldScreen() {
   const moneyClass = wide ? 'w-28 text-sm' : 'w-[68px] text-[13px]';
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       <View className="w-full max-w-5xl flex-1 self-center">
         <View className="gap-2 px-3 py-3">
           <SearchField value={query} onChangeText={setQuery} />
@@ -133,7 +133,7 @@ export default function SoldScreen() {
           </View>
         ) : null}
 
-        <View className={`flex-row items-center border-b border-slate-200 py-2 ${rowClass}`}>
+        <View className={`flex-row items-center border-b border-slate-200 py-2 dark:border-slate-800 ${rowClass}`}>
           <View style={{ width: thumbSize }} />
           <HeaderText className="flex-1">Name</HeaderText>
           <HeaderText className={`text-right ${moneyClass}`}>Bought</HeaderText>
@@ -168,21 +168,21 @@ export default function SoldScreen() {
                 <Pressable
                   onPress={() => setEditing(item)}
                   accessibilityRole="button"
-                  className={`flex-row items-center border-b border-slate-100 bg-white py-2.5 active:bg-slate-50 ${rowClass}`}>
+                  className={`flex-row items-center border-b border-slate-100 bg-white py-2.5 active:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:active:bg-slate-800 ${rowClass}`}>
                   <Thumbnail uri={thumbnailFor(item)} size={thumbSize} />
                   <View className="flex-1 gap-0.5">
-                    <Text numberOfLines={2} className="text-sm font-medium text-slate-900">
+                    <Text numberOfLines={2} className="text-sm font-medium text-slate-900 dark:text-slate-100">
                       {item.name}
                     </Text>
-                    {wide ? null : <Text className="text-xs text-slate-500">{item.sold_date}</Text>}
+                    {wide ? null : <Text className="text-xs text-slate-500 dark:text-slate-400">{item.sold_date}</Text>}
                     {item.bundle_id ? (
-                      <Text className="text-xs font-medium text-teal-700">Sold in a bundle</Text>
+                      <Text className="text-xs font-medium text-teal-700 dark:text-teal-300">Sold in a bundle</Text>
                     ) : null}
                   </View>
                   <Money value={item.bought_for} className={moneyClass} />
                   <Money value={item.sold_for} className={moneyClass} />
                   {wide ? (
-                    <Text className="w-28 text-right text-sm text-slate-700">{item.sold_date}</Text>
+                    <Text className="w-28 text-right text-sm text-slate-700 dark:text-slate-300">{item.sold_date}</Text>
                   ) : null}
                   <Money
                     value={profit}
@@ -197,10 +197,10 @@ export default function SoldScreen() {
 
         {!loading && visibleItems.length > 0 ? (
           <View
-            className={`flex-row items-center justify-between border-t border-slate-200 bg-white py-3 ${rowClass}`}>
-            <Text className="text-base font-semibold text-slate-900">
+            className={`flex-row items-center justify-between border-t border-slate-200 bg-white py-3 dark:border-slate-800 dark:bg-slate-900 ${rowClass}`}>
+            <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">
               {searching || filtering ? 'Profit' : 'Total profit'}
-              <Text className="text-sm font-normal text-slate-500">
+              <Text className="text-sm font-normal text-slate-500 dark:text-slate-400">
                 {searching || filtering
                   ? `  ·  ${visibleItems.length} of ${formatItemCount(items.length)}`
                   : `  ·  ${formatItemCount(items.length)}`}

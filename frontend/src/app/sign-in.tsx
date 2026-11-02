@@ -35,15 +35,15 @@ export default function SignInScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}>
         <View className="flex-1 items-center justify-center p-6">
           <View className="w-full max-w-sm gap-4">
             <View className="gap-1">
-              <Text className="text-3xl font-bold text-teal-700">Vinted Helper</Text>
-              <Text className="text-base text-slate-600">Sign in to your stock tracker.</Text>
+              <Text className="text-3xl font-bold text-teal-700 dark:text-teal-300">Vinted Helper</Text>
+              <Text className="text-base text-slate-600 dark:text-slate-400">Sign in to your stock tracker.</Text>
             </View>
             {error ? <ErrorBanner message={error} /> : null}
             <Field
