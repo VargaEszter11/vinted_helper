@@ -5,6 +5,7 @@ import { ModalSheet } from '@/components/modal-sheet';
 import { Button, ErrorBanner, Field, PriceField } from '@/components/ui';
 import {
   errorMessage,
+  currencySymbol,
   formatHuf,
   formatItemCount,
   isValidIsoDate,
@@ -92,7 +93,7 @@ export function MarkBundleSoldModal({
       </View>
       <View className="flex-row gap-3">
         <PriceField
-          label={t('itemForm.soldFor')}
+          label={t('itemForm.soldFor', { currency: currencySymbol() })}
           value={soldFor}
           onChangeText={edit(setSoldFor, 'soldFor')}
           hint={sharesText ? t('soldModal.eachItem', { price: sharesText }) : undefined}

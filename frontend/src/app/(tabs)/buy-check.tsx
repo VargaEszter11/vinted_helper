@@ -17,7 +17,7 @@ import {
   type PricesInput,
   type ResultField,
 } from '@/lib/buy-check';
-import { errorMessage, formatHuf, parsePrice } from '@/lib/format';
+import { currencySymbol, errorMessage, formatHuf, parsePrice } from '@/lib/format';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { pickPhotos } from '@/lib/photos';
 import type { LocalPhoto } from '@/lib/types';
@@ -206,7 +206,7 @@ export default function BuyCheckScreen() {
         </View>
 
         <PriceField
-          label={t('buyCheck.priceIWouldPay')}
+          label={t('buyCheck.priceIWouldPay', { currency: currencySymbol() })}
           value={priceText}
           onChangeText={setPriceText}
           error={priceText !== '' ? price.error : undefined}

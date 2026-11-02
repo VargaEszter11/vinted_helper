@@ -12,7 +12,8 @@ import {
   type Verdict,
   type UsedListing,
 } from '@/lib/buy-check';
-import { formatDateTime, formatHuf, parsePrice } from '@/lib/format';
+import { currencySymbol, formatDateTime, formatHuf, parsePrice } from '@/lib/format';
+import { COUNTRIES, useRegion } from '@/lib/region';
 import { translateServerMessage, useT, type MessageKey, type Translator } from '@/lib/i18n';
 
 const VERDICT_STYLES: Record<Verdict | 'LOW_CONFIDENCE', { box: string; text: string; label: MessageKey }> = {
@@ -84,7 +85,9 @@ export function PricesSection({
   onFind: () => void;
 }) {
   const t = useT();
+  const { country } = useRegion();
   const { loading, error, data } = state;
+  const vintedHost = COUNTRIES[country].vintedHost.replace(/^www\./, '');
   const [overrideText, setOverrideText] = useState('');
   const [showDropped, setShowDropped] = useState(false);
 
@@ -106,10 +109,10 @@ export function PricesSection({
           disabled={!canSearch}
         />
         <Button
-          title={t('prices.openVinted')}
+          title={t('prices.openVinted', { site: vintedHost })}
           icon="open-outline"
           variant="secondary"
-          onPress={() => openLink(vintedSearchUrl(searchPhrase))}
+          onPress={() => openLink(vintedSearchUrl(searchPhrase, country))}
           disabled={searchPhrase === ''}
         />
       </View>
@@ -270,7 +273,7 @@ function PricesResultView({
         ) : null}
 
         <PriceField
-          label={t('prices.overrideLabel')}
+          label={t('prices.overrideLabel', { currency: currencySymbol() })}
           value={overrideText}
           onChangeText={onOverrideChange}
           hint={t('prices.overrideHint')}

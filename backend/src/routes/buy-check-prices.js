@@ -4,6 +4,7 @@ import { MAX_IMAGE_BYTES, isJpeg } from '../lib/images.js';
 import { CATEGORIES, CONDITIONS } from '../lib/item-recognition.js';
 import { plainText } from '../lib/item-category.js';
 import { findOwnSales } from '../lib/own-sales.js';
+import { COUNTRY_CODES, CURRENCY_CODES, convertAmount, resolveMarket } from '../lib/markets.js';
 import { LookupUnavailableError, SEARCH_VERSION, searchPrices } from '../lib/price-search.js';
 import { VERDICT_CONFIG, computeVerdict } from '../lib/verdict.js';
 import { addVisualMatch } from '../lib/visual-match.js';
@@ -37,6 +38,8 @@ const pricesSchema = {
         maxItems: MAX_COMPARE_IMAGES,
         items: { type: 'string', minLength: 100, maxLength: Math.ceil((MAX_IMAGE_BYTES * 4) / 3) + 4 },
       },
+      country: { type: 'string', enum: COUNTRY_CODES },
+      currency: { type: 'string', enum: CURRENCY_CODES },
     },
   },
 };
@@ -82,7 +85,8 @@ export default async function buyCheckPriceRoutes(app) {
       clean(body.search_phrase) ?? [item.brand, item.item_type].filter(Boolean).join(' '),
       item.brand,
     );
-    const key = cacheKey(item.search_phrase);
+    const market = resolveMarket(body.country, body.currency);
+    const key = cacheKey(`${market.country} ${market.currency} ${item.search_phrase}`);
     if (key.length < 2) {
       return reply.code(400).send({ message: 'Enter a search phrase (or a brand and item type) first.' });
     }
@@ -122,7 +126,7 @@ export default async function buyCheckPriceRoutes(app) {
         }
 
         try {
-          const found = await searchPrices(item);
+          const found = await searchPrices(item, market);
           web = { ...found.web, available: true };
           await pool.query(
             `insert into price_cache (key, data) values ($1, $2)
@@ -173,12 +177,19 @@ export default async function buyCheckPriceRoutes(app) {
         }
       }
 
-      const verdict = computeVerdict({
-        price: body.price,
-        ownSales,
-        usedPrices: web.used.listings.map((listing) => listing.price),
-        newPriceMedian: web.new_price?.median ?? null,
-      });
+      const thresholds = {
+        ...VERDICT_CONFIG,
+        buyMinMarginHuf: convertAmount(VERDICT_CONFIG.buyMinMarginHuf, 'HUF', market.currency) ?? VERDICT_CONFIG.buyMinMarginHuf,
+      };
+      const verdict = computeVerdict(
+        {
+          price: body.price,
+          ownSales,
+          usedPrices: web.used.listings.map((listing) => listing.price),
+          newPriceMedian: web.new_price?.median ?? null,
+        },
+        thresholds,
+      );
 
       return {
         item,
@@ -188,7 +199,7 @@ export default async function buyCheckPriceRoutes(app) {
         cache,
         own_sales: ownSales,
         verdict,
-        thresholds: VERDICT_CONFIG,
+        thresholds,
       };
     } finally {
       running.delete(userId);

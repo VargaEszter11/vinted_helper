@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import { ModalSheet } from '@/components/modal-sheet';
 import { Button, ErrorBanner, PriceField } from '@/components/ui';
 import { confirmAsync } from '@/lib/confirm';
-import { errorMessage, formatHuf, formatItemCount, parsePrice, priceToInput } from '@/lib/format';
+import { currencySymbol, errorMessage, formatHuf, formatItemCount, parsePrice, priceToInput } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { deleteBundle, newItemId, saveBundle } from '@/lib/items';
 import type { Item } from '@/lib/types';
@@ -100,7 +100,7 @@ export function BundleModal({
         ))}
       </View>
       <PriceField
-        label={t('bundle.price')}
+        label={t('bundle.price', { currency: currencySymbol() })}
         value={listedFor}
         onChangeText={(value) => {
           setListedFor(value);

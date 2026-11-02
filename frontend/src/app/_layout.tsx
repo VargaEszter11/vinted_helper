@@ -9,22 +9,25 @@ import { CenteredSpinner } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { isApiConfigured } from '@/lib/api';
 import { LanguageProvider, useT } from '@/lib/i18n';
+import { RegionProvider } from '@/lib/region';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 
 export default function RootLayout() {
   return (
     <LanguageProvider>
-      {isApiConfigured ? (
-        <ThemeProvider>
-          <AuthProvider>
-            <ThemedStatusBar />
-            <RootNavigator />
-            <ConfirmHost />
-          </AuthProvider>
-        </ThemeProvider>
-      ) : (
-        <MissingConfig />
-      )}
+      <RegionProvider>
+        {isApiConfigured ? (
+          <ThemeProvider>
+            <AuthProvider>
+              <ThemedStatusBar />
+              <RootNavigator />
+              <ConfirmHost />
+            </AuthProvider>
+          </ThemeProvider>
+        ) : (
+          <MissingConfig />
+        )}
+      </RegionProvider>
     </LanguageProvider>
   );
 }

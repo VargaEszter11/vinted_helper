@@ -1,15 +1,23 @@
 import { getT, translateServerMessage } from '@/lib/i18n';
+import { CURRENCIES, getCurrency } from '@/lib/region';
 
 const NBSP = ' ';
 const MAX_PRICE = 9_999_999_999;
 
-/** Formats a forint amount like "4 500 Ft". */
-export function formatHuf(value: number): string {
+/** Formats an amount in the currency chosen in Settings, like "4 500 Ft" or "45 €". */
+export function formatMoney(value: number): string {
   const rounded = Math.round(value);
   const digits = Math.abs(rounded)
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
-  return `${rounded < 0 ? '-' : ''}${digits}${NBSP}Ft`;
+  return `${rounded < 0 ? '-' : ''}${digits}${NBSP}${getCurrency().symbol}`;
+}
+
+/** @deprecated Use formatMoney. Kept so older call sites keep working. */
+export const formatHuf = formatMoney;
+
+export function currencySymbol(): string {
+  return getCurrency().symbol;
 }
 
 /** Formats an ISO timestamp in the device's time zone, like "2026-10-15 13:17". */
@@ -45,14 +53,19 @@ export function priceToInput(value: number | null | undefined): string {
 }
 
 /**
- * Parses a price typed by the user. Accepts "4500", "4 500", "4500,5" and "4500 Ft".
+ * Parses a price typed by the user. Accepts "4500", "4 500", "4500,5" and "4500 Ft" / "45 €".
  * An empty input gives `value: null`.
  */
 export function parsePrice(input: string): { value: number | null; error?: string } {
-  const cleaned = input
-    .replace(/ft$/i, '')
-    .replace(/[\s ]/g, '')
-    .replace(',', '.');
+  const aliases = Object.values(CURRENCIES)
+    .flatMap((currency) => [currency.symbol, ...currency.aliases])
+    .sort((a, b) => b.length - a.length);
+  let stripped = input.trim();
+  for (const token of aliases) {
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    stripped = stripped.replace(new RegExp(escaped, 'gi'), '');
+  }
+  const cleaned = stripped.replace(/[\s ]/g, '').replace(',', '.');
   if (cleaned === '') return { value: null };
   if (!/^\d+(\.\d+)?$/.test(cleaned)) {
     return { value: null, error: getT()('price.invalid') };

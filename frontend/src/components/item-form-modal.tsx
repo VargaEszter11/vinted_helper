@@ -19,6 +19,7 @@ import { confirmAsync } from '@/lib/confirm';
 import {
   errorMessage,
   formatDateTime,
+  currencySymbol,
   formatHuf,
   isValidIsoDate,
   parsePrice,
@@ -338,7 +339,7 @@ export function ItemFormModal({
       </View>
       <View className="flex-row gap-3">
         <PriceField
-          label={t('itemForm.boughtFor')}
+          label={t('itemForm.boughtFor', { currency: currencySymbol() })}
           value={boughtFor}
           onChangeText={edit(setBoughtFor, 'boughtFor')}
           hint={t('itemForm.boughtHint')}
@@ -347,7 +348,7 @@ export function ItemFormModal({
           className="flex-1"
         />
         <PriceField
-          label={t('itemForm.listedFor')}
+          label={t('itemForm.listedFor', { currency: currencySymbol() })}
           value={listedFor}
           onChangeText={changeListedFor}
           hint={t('common.optional')}
@@ -368,7 +369,7 @@ export function ItemFormModal({
       {status === 'sold' ? (
         <View className="flex-row gap-3">
           <PriceField
-            label={t('itemForm.soldFor')}
+            label={t('itemForm.soldFor', { currency: currencySymbol() })}
             value={soldFor}
             onChangeText={edit(setSoldFor, 'soldFor')}
             error={errors.soldFor}

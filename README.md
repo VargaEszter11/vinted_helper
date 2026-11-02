@@ -2,7 +2,7 @@
 
 **A stock, sales and buy-check app for second-hand clothing resellers.**
 
-Built for people who buy, list and sell on Vinted (and similar marketplaces) and want one place for cost, photos, status and whether the next find is worth buying. Prices are in Hungarian forint.
+Built for people who buy, list and sell on Vinted (and similar marketplaces) and want one place for cost, photos, status and whether the next find is worth buying. Prices use the currency you pick in Settings (Hungarian forint by default).
 
 - Track what you bought, listed and sold, with photos and profit per item
 - Search, filter and sort by brand, size, condition and Vinted category
@@ -136,7 +136,7 @@ Web results are cached for 24 hours per search phrase (listing photo addresses t
 - **Items** tab: unsold items (in stock or listed) with **All / In stock / Listed**, an **Add item** button and a **Mark as sold** action per row. Tap a row to edit it. Each row shows the date its status last changed.
 - **Sold** tab: sold items with profit per item (`sold for − bought for`) and the total profit. Tap a row to edit it.
 - Both lists have a search field (name, brand, size, measurements, flaws), filters for **Brand**, **Size**, **Condition** and **Category**, and **Sort** (name, price, last status change).
-- **Settings** tab: switch between light and dark theme, and English or Hungarian. The choices are saved on this device.
+- **Settings** tab: switch theme, language, country and currency. The choices are saved on this device. Country picks the Vinted site for Buy check; currency is the symbol on every price.
 - **Bought for** is the total cost of the item, including fees and shipping.
 - **Brand**, **Size**, **Measurements**, **Flaws**, **Condition** and **Category** are optional. Condition uses the same scale as Buy check. Category is a Vinted-style leaf (Women's Fashion › Clothing › Jeans, and so on); the form suggests one from the name and photos (same DeepSeek key as Buy check). You can pick another from the tree.
 - The category tree lives in [`backend/src/lib/vinted-categories.js`](backend/src/lib/vinted-categories.js). After editing it, run `node scripts/sync-vinted-categories.mjs` from the repo root so the app copy stays in sync.

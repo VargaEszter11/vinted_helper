@@ -1,9 +1,17 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps, ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { BRAND_COLOR } from '@/components/ui';
-import { useLanguage, type Language } from '@/lib/i18n';
+import { useLanguage, type Language, type MessageKey } from '@/lib/i18n';
+import {
+  COUNTRY_CODES,
+  CURRENCY_CODES,
+  useRegion,
+  type CountryCode,
+  type CurrencyCode,
+} from '@/lib/region';
 import { useTheme, type ThemePreference } from '@/lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -51,6 +59,82 @@ function ChoiceRow<T extends string>({
   );
 }
 
+function SettingSelect<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
+
+  return (
+    <View className="gap-1">
+      <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</Text>
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        className="flex-row items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 dark:border-slate-600 dark:bg-slate-800">
+        <Text className="flex-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{selectedLabel}</Text>
+        <Ionicons name="chevron-down" size={16} color="#64748b" />
+      </Pressable>
+      <Modal transparent animationType="fade" visible={open} onRequestClose={() => setOpen(false)}>
+        <Pressable
+          className="flex-1 items-center justify-center bg-black/40 p-6"
+          onPress={() => setOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}>
+          <Pressable className="max-h-[70%] w-full max-w-sm rounded-xl bg-white dark:bg-slate-900">
+            <View className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{label}</Text>
+              <Pressable
+                onPress={() => setOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                className="rounded-full p-1 active:bg-slate-100 dark:active:bg-slate-800">
+                <Ionicons name="close" size={20} color="#94a3b8" />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerClassName="p-2">
+              {options.map((option) => {
+                const selected = option.value === value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    className={`flex-row items-center justify-between rounded-lg px-3 py-2.5 ${
+                      selected ? 'bg-teal-50 dark:bg-teal-950' : 'active:bg-slate-100 dark:active:bg-slate-800'
+                    }`}>
+                    <Text
+                      className={`flex-1 text-sm ${
+                        selected ? 'font-semibold text-teal-800 dark:text-teal-200' : 'text-slate-700 dark:text-slate-200'
+                      }`}>
+                      {option.label}
+                    </Text>
+                    {selected ? <Ionicons name="checkmark" size={18} color={BRAND_COLOR} /> : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
 function SettingsCard({
   title,
   hint,
@@ -72,6 +156,7 @@ function SettingsCard({
 export default function SettingsScreen() {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { country, currency, setCountry, setCurrency } = useRegion();
 
   const themes: { value: ThemePreference; label: string; icon: IconName }[] = [
     { value: 'light', label: t('settings.themeLight'), icon: 'sunny-outline' },
@@ -84,15 +169,35 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
-      <View className="w-full max-w-5xl flex-1 self-center gap-4 px-4 py-6">
+    <ScrollView className="flex-1 bg-slate-50 dark:bg-slate-950" contentContainerClassName="items-center px-4 py-6">
+      <View className="w-full max-w-5xl gap-4">
         <SettingsCard title={t('settings.appearance')} hint={t('settings.appearanceHint')}>
           <ChoiceRow options={themes} value={theme} onChange={setTheme} />
         </SettingsCard>
         <SettingsCard title={t('settings.language')} hint={t('settings.languageHint')}>
           <ChoiceRow options={languages} value={language} onChange={setLanguage} />
         </SettingsCard>
+        <SettingsCard title={t('settings.region')} hint={t('settings.regionHint')}>
+          <SettingSelect
+            label={t('settings.country')}
+            value={country}
+            options={COUNTRY_CODES.map((code) => ({
+              value: code,
+              label: t(`country.${code}` as MessageKey),
+            }))}
+            onChange={(next) => setCountry(next as CountryCode)}
+          />
+          <SettingSelect
+            label={t('settings.currency')}
+            value={currency}
+            options={CURRENCY_CODES.map((code) => ({
+              value: code,
+              label: t(`currency.${code}` as MessageKey),
+            }))}
+            onChange={(next) => setCurrency(next as CurrencyCode)}
+          />
+        </SettingsCard>
       </View>
-    </View>
+    </ScrollView>
   );
 }

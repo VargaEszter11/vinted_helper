@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { COUNTRIES, getRegion } from '@/lib/region';
 import type { LocalPhoto } from '@/lib/types';
 
 export const MAX_BUY_CHECK_PHOTOS = 3;
@@ -113,7 +114,7 @@ export type PricesResult = {
   web: {
     available: boolean;
     message?: string;
-    new_price: { min: number; median: number; max: number; currency: 'HUF'; sources: PriceSource[] } | null;
+    new_price: { min: number; median: number; max: number; currency: string; sources: PriceSource[] } | null;
     used: { listings: UsedListing[]; dropped: UsedListing[] };
     note: string | null;
     rates_note: string | null;
@@ -155,11 +156,14 @@ export type PricesInput = {
   condition: string;
   /** Base64 JPEGs of the item (at most 2), so listings can be compared with its photos. */
   images?: string[];
+  country?: string;
+  currency?: string;
 };
 
 /** Looks up prices for the (corrected) item. Nothing is saved. */
 export function findPrices(input: PricesInput): Promise<PricesResult> {
-  return api<PricesResult>('/buy-check/prices', { method: 'POST', body: input });
+  const { country, currency } = getRegion();
+  return api<PricesResult>('/buy-check/prices', { method: 'POST', body: { ...input, country, currency } });
 }
 
 /** The same rule the server uses: margin = resale value minus the price you pay. */
@@ -169,5 +173,5 @@ export function classifyMargin(margin: number, price: number, thresholds: Verdic
   return 'SKIP';
 }
 
-export const vintedSearchUrl = (phrase: string) =>
-  `https://www.vinted.hu/catalog?search_text=${encodeURIComponent(phrase.trim())}`;
+export const vintedSearchUrl = (phrase: string, country = getRegion().country) =>
+  `https://${COUNTRIES[country].vintedHost}/catalog?search_text=${encodeURIComponent(phrase.trim())}`;
