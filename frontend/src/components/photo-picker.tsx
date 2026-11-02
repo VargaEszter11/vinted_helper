@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Thumbnail } from '@/components/thumbnail';
-import { BRAND_COLOR, Button } from '@/components/ui';
+import { Button, getBrandColor } from '@/components/ui';
 import { errorMessage } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { pickPhotos } from '@/lib/photos';
@@ -74,7 +74,7 @@ export function PhotoPicker({
             <View
               style={{ width: TILE_SIZE, height: TILE_SIZE }}
               className="items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-              <ActivityIndicator color={BRAND_COLOR} />
+              <ActivityIndicator color={getBrandColor()} />
             </View>
           ) : null}
         </ScrollView>

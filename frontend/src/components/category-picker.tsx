@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useState } from 'react';
 import { FlatList, Modal, Platform, Pressable, Text, View } from 'react-native';
 
-import { BRAND_COLOR, SearchField } from '@/components/ui';
+import { SearchField, getBrandColor } from '@/components/ui';
 import { useT } from '@/lib/i18n';
 import {
   searchVintedCategories,
@@ -74,7 +74,7 @@ export function CategoryFilterSelect({
           className={`max-w-[140px] text-sm ${active ? 'font-semibold text-teal-800 dark:text-teal-200' : 'text-slate-700 dark:text-slate-200'}`}>
           {selectedLabel ?? t('filter.category')}
         </Text>
-        <Ionicons name="chevron-down" size={14} color={active ? BRAND_COLOR : '#64748b'} />
+        <Ionicons name="chevron-down" size={14} color={active ? getBrandColor() : '#64748b'} />
       </Pressable>
 
       <Modal transparent animationType="fade" visible={open} onRequestClose={close}>
@@ -178,7 +178,7 @@ export function CategoryPicker({
             ? 'border-teal-700 bg-teal-50 dark:bg-teal-950'
             : 'border-slate-300 bg-white active:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:active:bg-slate-800'
         } ${disabled ? 'opacity-50' : ''}`}>
-        <Ionicons name="folder-outline" size={18} color={selected ? BRAND_COLOR : '#64748b'} />
+        <Ionicons name="folder-outline" size={18} color={selected ? getBrandColor() : '#64748b'} />
         <Text
           numberOfLines={2}
           className={`flex-1 text-sm ${selected ? 'font-medium text-teal-900 dark:text-teal-100' : 'text-slate-600 dark:text-slate-300'}`}>

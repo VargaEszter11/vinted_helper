@@ -3,7 +3,8 @@ import type { ComponentProps, ReactNode } from 'react';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { BRAND_COLOR } from '@/components/ui';
+import { RgbColorPicker } from '@/components/color-picker';
+import { ACCENT_NAMES, ACCENTS } from '@/lib/accents';
 import { useLanguage, type Language, type MessageKey } from '@/lib/i18n';
 import {
   COUNTRY_CODES,
@@ -25,7 +26,7 @@ function ChoiceRow<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
-  const { theme } = useTheme();
+  const { theme, brandColor, brandTint } = useTheme();
   return (
     <View className="flex-row gap-3">
       {options.map((option) => {
@@ -44,7 +45,7 @@ function ChoiceRow<T extends string>({
             <Ionicons
               name={option.icon}
               size={18}
-              color={selected ? (theme === 'dark' ? '#5eead4' : BRAND_COLOR) : theme === 'dark' ? '#cbd5e1' : '#475569'}
+              color={selected ? (theme === 'dark' ? brandTint : brandColor) : theme === 'dark' ? '#cbd5e1' : '#475569'}
             />
             <Text
               className={`text-sm font-semibold ${
@@ -71,6 +72,7 @@ function SettingSelect<T extends string>({
   onChange: (value: T) => void;
 }) {
   const { t } = useLanguage();
+  const { brandColor } = useTheme();
   const [open, setOpen] = useState(false);
   const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
 
@@ -123,7 +125,7 @@ function SettingSelect<T extends string>({
                       }`}>
                       {option.label}
                     </Text>
-                    {selected ? <Ionicons name="checkmark" size={18} color={BRAND_COLOR} /> : null}
+                    {selected ? <Ionicons name="checkmark" size={18} color={brandColor} /> : null}
                   </Pressable>
                 );
               })}
@@ -153,6 +155,84 @@ function SettingsCard({
   );
 }
 
+function AccentSwatches() {
+  const { accent, accentHex, setAccent, setAccentHex } = useTheme();
+  const { t } = useLanguage();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const custom = accent === null;
+
+  return (
+    <View className="gap-2">
+      <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('settings.accent')}</Text>
+      <View className="flex-row flex-wrap items-center gap-2.5">
+        {ACCENT_NAMES.map((name) => {
+          const selected = name === accent;
+          const color = ACCENTS[name][500];
+          return (
+            <Pressable
+              key={name}
+              onPress={() => setAccent(name)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={t(`accent.${name}` as MessageKey)}
+              className="h-9 w-9 items-center justify-center rounded-full border-2"
+              style={{ borderColor: selected ? ACCENTS[name][700] : 'transparent' }}>
+              <View
+                className="h-7 w-7 items-center justify-center rounded-full"
+                style={{ backgroundColor: color }}>
+                {selected ? <Ionicons name="checkmark" size={14} color="#ffffff" /> : null}
+              </View>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          onPress={() => setPickerOpen(true)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: custom }}
+          accessibilityLabel={t('settings.accentCustom')}
+          className="h-9 w-9 items-center justify-center rounded-full border-2 border-dashed"
+          style={{
+            borderColor: custom ? accentHex : '#94a3b8',
+            borderStyle: custom ? 'solid' : 'dashed',
+          }}>
+          <View
+            className="h-7 w-7 items-center justify-center rounded-full"
+            style={{ backgroundColor: custom ? accentHex : 'transparent' }}>
+            {custom ? (
+              <Ionicons name="checkmark" size={14} color="#ffffff" />
+            ) : (
+              <Ionicons name="add" size={18} color="#64748b" />
+            )}
+          </View>
+        </Pressable>
+      </View>
+      <Modal transparent animationType="fade" visible={pickerOpen} onRequestClose={() => setPickerOpen(false)}>
+        <Pressable
+          className="flex-1 items-center justify-center bg-black/40 p-6"
+          onPress={() => setPickerOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}>
+          <Pressable className="w-full max-w-md gap-3 rounded-xl bg-white p-4 dark:bg-slate-900">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                {t('settings.accentCustom')}
+              </Text>
+              <Pressable
+                onPress={() => setPickerOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                className="rounded-full p-1 active:bg-slate-100 dark:active:bg-slate-800">
+                <Ionicons name="close" size={20} color="#94a3b8" />
+              </Pressable>
+            </View>
+            <RgbColorPicker value={accentHex} onChange={setAccentHex} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
@@ -173,6 +253,7 @@ export default function SettingsScreen() {
       <View className="w-full max-w-5xl gap-4">
         <SettingsCard title={t('settings.appearance')} hint={t('settings.appearanceHint')}>
           <ChoiceRow options={themes} value={theme} onChange={setTheme} />
+          <AccentSwatches />
         </SettingsCard>
         <SettingsCard title={t('settings.language')} hint={t('settings.languageHint')}>
           <ChoiceRow options={languages} value={language} onChange={setLanguage} />

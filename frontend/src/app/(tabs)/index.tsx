@@ -9,7 +9,6 @@ import { MarkBundleSoldModal } from '@/components/mark-bundle-sold-modal';
 import { MarkSoldModal } from '@/components/mark-sold-modal';
 import { Thumbnail } from '@/components/thumbnail';
 import {
-  BRAND_COLOR,
   Button,
   CenteredSpinner,
   EmptyState,
@@ -21,6 +20,7 @@ import {
   SearchField,
   Segmented,
   StatusBadge,
+  getBrandColor,
   useConditionOptions,
   useWideLayout,
 } from '@/components/ui';
@@ -191,7 +191,7 @@ export default function ItemsScreen() {
               <Ionicons
                 name={isSelected ? 'checkbox' : 'square-outline'}
                 size={24}
-                color={isSelected ? BRAND_COLOR : '#94a3b8'}
+                color={isSelected ? getBrandColor() : '#94a3b8'}
                 accessibilityLabel={isSelected ? t('common.selected') : t('common.notSelected')}
               />
             )
@@ -221,7 +221,7 @@ export default function ItemsScreen() {
         <View
           style={{ width: thumbSize, height: thumbSize }}
           className="items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900">
-          <Ionicons name="albums-outline" size={thumbSize * 0.5} color={BRAND_COLOR} />
+          <Ionicons name="albums-outline" size={thumbSize * 0.5} color={getBrandColor()} />
         </View>
         <View className="flex-1 gap-1">
           <Text numberOfLines={1} className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -365,7 +365,7 @@ export default function ItemsScreen() {
             data={rows}
             keyExtractor={rowKey}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={BRAND_COLOR} />
+              <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={getBrandColor()} />
             }
             ListEmptyComponent={
               items.length === 0 ? (

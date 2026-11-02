@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ModalSheet } from '@/components/modal-sheet';
-import { BRAND_COLOR, Button, ErrorBanner, Field, PriceField } from '@/components/ui';
+import { Button, ErrorBanner, Field, PriceField, getBrandColor } from '@/components/ui';
 import {
   errorMessage,
   currencySymbol,
@@ -196,7 +196,7 @@ function CheckRow({
       <Ionicons
         name={checked ? 'checkbox' : 'square-outline'}
         size={22}
-        color={checked ? BRAND_COLOR : '#94a3b8'}
+        color={checked ? getBrandColor() : '#94a3b8'}
       />
       <Text numberOfLines={1} className="flex-1 text-sm text-slate-800 dark:text-slate-200">
         {label}

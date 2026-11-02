@@ -4,7 +4,6 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { ModalSheet } from '@/components/modal-sheet';
 import { PhotoPicker } from '@/components/photo-picker';
 import {
-  BRAND_COLOR,
   Button,
   Chips,
   ErrorBanner,
@@ -13,6 +12,7 @@ import {
   Segmented,
   STATUS_VALUES,
   StatusBadge,
+  getBrandColor,
   useConditionOptions,
 } from '@/components/ui';
 import { confirmAsync } from '@/lib/confirm';
@@ -316,7 +316,7 @@ export function ItemFormModal({
       <View className="gap-1">
         <View className="flex-row items-center gap-2">
           <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('itemForm.category')}</Text>
-          {suggestingCategory ? <ActivityIndicator size="small" color={BRAND_COLOR} /> : null}
+          {suggestingCategory ? <ActivityIndicator size="small" color={getBrandColor()} /> : null}
         </View>
         <CategoryPicker value={category} onChange={changeCategory} disabled={disabled} />
         {categorySuggestError ? (

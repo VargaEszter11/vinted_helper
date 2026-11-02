@@ -4,7 +4,7 @@ import { ActivityIndicator, Platform, ScrollView, Text, View } from 'react-nativ
 
 import { NO_PRICES, PricesSection, type PricesState } from '@/components/buy-check-prices';
 import { PhotoTile, TILE_SIZE } from '@/components/photo-picker';
-import { BRAND_COLOR, Button, Chips, ErrorBanner, Field, PriceField, useConditionOptions } from '@/components/ui';
+import { Button, Chips, ErrorBanner, Field, PriceField, getBrandColor, useConditionOptions } from '@/components/ui';
 import {
   BUY_CHECK_PHOTO_WIDTH,
   CATEGORY_OPTIONS,
@@ -178,7 +178,7 @@ export default function BuyCheckScreen() {
                 <View
                   style={{ width: TILE_SIZE, height: TILE_SIZE }}
                   className="items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-                  <ActivityIndicator color={BRAND_COLOR} />
+                  <ActivityIndicator color={getBrandColor()} />
                 </View>
               ) : null}
             </ScrollView>

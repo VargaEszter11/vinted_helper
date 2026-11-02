@@ -2,7 +2,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { Pressable, Text } from 'react-native';
 
-import { BRAND_COLOR } from '@/components/ui';
 import { setToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
@@ -10,13 +9,13 @@ import { useTheme } from '@/lib/theme';
 
 export default function TabLayout() {
   const { isAdmin } = useAuth();
-  const { theme } = useTheme();
+  const { theme, brandColor, brandTint } = useTheme();
   const t = useT();
   const dark = theme === 'dark';
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: dark ? '#5eead4' : BRAND_COLOR,
+        tabBarActiveTintColor: dark ? brandTint : brandColor,
         tabBarInactiveTintColor: dark ? '#94a3b8' : '#64748b',
         tabBarStyle: {
           backgroundColor: dark ? '#0f172a' : '#ffffff',

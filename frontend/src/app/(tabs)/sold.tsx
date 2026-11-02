@@ -5,7 +5,6 @@ import { CategoryFilterSelect } from '@/components/category-picker';
 import { ItemFormModal } from '@/components/item-form-modal';
 import { Thumbnail } from '@/components/thumbnail';
 import {
-  BRAND_COLOR,
   Button,
   CenteredSpinner,
   EmptyState,
@@ -15,6 +14,7 @@ import {
   HeaderText,
   Money,
   SearchField,
+  getBrandColor,
   profitColor,
   useConditionOptions,
   useWideLayout,
@@ -154,7 +154,7 @@ export default function SoldScreen() {
             data={sortedVisible}
             keyExtractor={(item) => item.id}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={BRAND_COLOR} />
+              <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={getBrandColor()} />
             }
             ListEmptyComponent={
               items.length === 0 ? (

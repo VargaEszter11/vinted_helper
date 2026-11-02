@@ -12,12 +12,13 @@ import {
   type TextInputProps,
 } from 'react-native';
 
+import { getBrandColor, hexAlpha } from '@/lib/accents';
 import { formatHuf } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
 import type { ItemCondition, ItemStatus } from '@/lib/types';
 
-export const BRAND_COLOR = '#0f766e';
+export { getBrandColor };
 
 /** Keeps the browser from drawing its own focus ring around a text input. */
 const NO_BROWSER_OUTLINE = { outlineStyle: 'none' } as unknown as ComponentProps<
@@ -27,8 +28,8 @@ const NO_BROWSER_OUTLINE = { outlineStyle: 'none' } as unknown as ComponentProps
 /** Teal border and glow while focused, matching the search field. Red wins when the value is invalid. */
 function focusFrame(focused: boolean, error = false, dark = false) {
   return {
-    borderColor: error ? '#ef4444' : focused ? BRAND_COLOR : dark ? '#475569' : '#cbd5e1',
-    boxShadow: focused && !error ? '0 0 0 3px rgba(15, 118, 110, 0.25)' : undefined,
+    borderColor: error ? '#ef4444' : focused ? getBrandColor() : dark ? '#475569' : '#cbd5e1',
+    boxShadow: focused && !error ? `0 0 0 3px ${hexAlpha(getBrandColor(), 0.25)}` : undefined,
   };
 }
 
@@ -39,14 +40,14 @@ export function useWideLayout(): boolean {
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-ghost';
 
-const BUTTON_VARIANTS: Record<ButtonVariant, { box: string; text: string; tint: string }> = {
+const BUTTON_VARIANTS: Record<ButtonVariant, { box: string; text: string; tint: string | 'brand' }> = {
   primary: { box: 'bg-teal-700 active:bg-teal-800', text: 'text-white', tint: '#ffffff' },
   secondary: {
     box: 'border border-slate-300 bg-white active:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:active:bg-slate-800',
     text: 'text-slate-800 dark:text-slate-100',
-    tint: BRAND_COLOR,
+    tint: 'brand',
   },
-  ghost: { box: 'active:bg-slate-100 dark:active:bg-slate-800', text: 'text-teal-700 dark:text-teal-300', tint: BRAND_COLOR },
+  ghost: { box: 'active:bg-slate-100 dark:active:bg-slate-800', text: 'text-teal-700 dark:text-teal-300', tint: 'brand' },
   danger: { box: 'bg-red-600 active:bg-red-700', text: 'text-white', tint: '#ffffff' },
   'danger-ghost': { box: 'active:bg-red-50 dark:active:bg-red-950', text: 'text-red-600 dark:text-red-400', tint: '#dc2626' },
 };
@@ -71,6 +72,7 @@ export function Button({
   className?: string;
 }) {
   const styles = BUTTON_VARIANTS[variant];
+  const tint = styles.tint === 'brand' ? getBrandColor() : styles.tint;
   const inactive = disabled || loading;
   return (
     <Pressable
@@ -81,9 +83,9 @@ export function Button({
         size === 'sm' ? 'px-2.5 py-1.5' : 'px-4 py-2.5'
       } ${styles.box} ${inactive ? 'opacity-50' : ''} ${className}`}>
       {loading ? (
-        <ActivityIndicator size="small" color={styles.tint} />
+        <ActivityIndicator size="small" color={tint} />
       ) : icon ? (
-        <Ionicons name={icon} size={size === 'sm' ? 16 : 18} color={styles.tint} />
+        <Ionicons name={icon} size={size === 'sm' ? 16 : 18} color={tint} />
       ) : null}
       <Text
         numberOfLines={1}
@@ -113,7 +115,7 @@ export function Field({
       <TextInput
         accessibilityLabel={label}
         placeholderTextColor={dark ? '#64748b' : '#94a3b8'}
-        selectionColor={BRAND_COLOR}
+        selectionColor={getBrandColor()}
         className="rounded-lg border bg-white px-3 py-2.5 text-base text-slate-900 dark:bg-slate-900 dark:text-slate-100"
         {...inputProps}
         onFocus={(event) => {
@@ -159,7 +161,7 @@ export function SearchField({
       className="w-full flex-row items-center gap-2 rounded-lg border bg-white px-3 dark:bg-slate-900"
       // Border color stays in `style`: swapping it through classes remounts the field on native.
       style={focusFrame(focused, false, dark)}>
-      <Ionicons name="search-outline" size={18} color={focused ? BRAND_COLOR : '#94a3b8'} />
+      <Ionicons name="search-outline" size={18} color={focused ? getBrandColor() : '#94a3b8'} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -168,7 +170,7 @@ export function SearchField({
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"
-        selectionColor={BRAND_COLOR}
+        selectionColor={getBrandColor()}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         accessibilityLabel={t('search.items')}
@@ -358,7 +360,7 @@ export function FilterSelect<T extends string>({
           }`}>
           {keepButtonLabel ? label : (selectedLabel ?? label)}
         </Text>
-        <Ionicons name="chevron-down" size={14} color={active ? BRAND_COLOR : '#64748b'} />
+        <Ionicons name="chevron-down" size={14} color={active ? getBrandColor() : '#64748b'} />
       </Pressable>
       <Modal transparent animationType="fade" visible={open} onRequestClose={() => setOpen(false)}>
         <Pressable
@@ -426,7 +428,7 @@ function FilterOption({
         }`}>
         {label}
       </Text>
-      {selected ? <Ionicons name="checkmark" size={18} color={BRAND_COLOR} /> : null}
+      {selected ? <Ionicons name="checkmark" size={18} color={getBrandColor()} /> : null}
     </Pressable>
   );
 }
@@ -466,7 +468,7 @@ export function profitColor(profit: number): string {
 export function CenteredSpinner() {
   return (
     <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
-      <ActivityIndicator size="large" color={BRAND_COLOR} />
+      <ActivityIndicator size="large" color={getBrandColor()} />
     </View>
   );
 }
