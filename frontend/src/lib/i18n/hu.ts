@@ -34,7 +34,8 @@ export const hu: Record<keyof typeof en, string> = {
 
   'settings.appearance': 'Megjelenés',
   'settings.appearanceHint':
-    'Válassz világos vagy sötét témát, és egy színt. Alapértelmezett a türkiz, ha nem választasz. Az eszközön mentjük.',
+    'Válassz témát (a Rendszer az eszköz világos vagy sötét módját követi) és egy színt. Alapértelmezett a türkiz, ha nem választasz. Az eszközön mentjük.',
+  'settings.themeSystem': 'Rendszer',
   'settings.themeLight': 'Világos',
   'settings.themeDark': 'Sötét',
   'settings.accent': 'Szín',
@@ -53,7 +54,8 @@ export const hu: Record<keyof typeof en, string> = {
   'accent.orange': 'Narancs',
   'accent.emerald': 'Smaragd',
   'settings.language': 'Nyelv',
-  'settings.languageHint': 'Válaszd ki az alkalmazás nyelvét. Az eszközön mentjük.',
+  'settings.languageSystem': 'Rendszer',
+  'settings.languageHint': 'Válaszd ki az alkalmazás nyelvét. A Rendszer az eszköz nyelvét használja (magyar vagy angol). Az eszközön mentjük.',
   'settings.region': 'Ország és pénznem',
   'settings.regionHint':
     'Az árcímkékhez és a Vétel ellenőrzéshez. Először a te országod keresési eredményei jönnek. A már beírt számokat nem váltjuk át.',

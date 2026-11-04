@@ -14,14 +14,18 @@ import {
 } from '@/lib/accents';
 import { readPreference, writePreference } from '@/lib/preferences';
 
-export type ThemePreference = 'light' | 'dark';
+/** What the user picked. 'system' follows the device or browser setting (the default). */
+export type ThemePreference = 'light' | 'dark' | 'system';
+/** The theme actually shown. */
+export type ResolvedTheme = 'light' | 'dark';
 
 const THEME_KEY = 'theme';
 const ACCENT_KEY = 'accent';
 const DEFAULT_HEX = ACCENTS[DEFAULT_ACCENT][700];
 
 type ThemeState = {
-  theme: ThemePreference;
+  theme: ResolvedTheme;
+  preference: ThemePreference;
   accent: AccentName | null;
   accentHex: string;
   brandColor: string;
@@ -34,6 +38,7 @@ type ThemeState = {
 
 const ThemeContext = createContext<ThemeState>({
   theme: 'light',
+  preference: 'system',
   accent: DEFAULT_ACCENT,
   accentHex: DEFAULT_HEX,
   brandColor: DEFAULT_HEX,
@@ -44,11 +49,22 @@ const ThemeContext = createContext<ThemeState>({
   ready: false,
 });
 
-function applyDomTheme(theme: ThemePreference) {
+function applyDomTheme(theme: ResolvedTheme) {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
   document.documentElement.classList.toggle('dark', theme === 'dark');
   document.documentElement.style.colorScheme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#020617' : '#ffffff');
+}
+
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+
+function browserTheme(): ResolvedTheme {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.matchMedia) return 'light';
+  return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
+}
+
+function parseStoredTheme(stored: string | null): ThemePreference {
+  return stored === 'light' || stored === 'dark' ? stored : 'system';
 }
 
 function persistAccent(name: AccentName | null, hex: string) {
@@ -57,18 +73,21 @@ function persistAccent(name: AccentName | null, hex: string) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { setColorScheme } = useColorScheme();
-  const [theme, setThemeState] = useState<ThemePreference>('light');
+  // On iOS/Android NativeWind's colorScheme follows the phone while the preference is 'system'.
+  const { colorScheme, setColorScheme } = useColorScheme();
+  const [preference, setPreference] = useState<ThemePreference>('system');
+  const [browserDark, setBrowserDark] = useState(() => browserTheme() === 'dark');
   const [accent, setAccentState] = useState<AccentName | null>(DEFAULT_ACCENT);
-  const [accentHex, setAccentHexState] = useState(DEFAULT_HEX);
+  const [accentHex, setAccentHexState] = useState<string>(DEFAULT_HEX);
   const [ready, setReady] = useState(false);
 
-  function apply(nextTheme: ThemePreference, hex: string, name: AccentName | null) {
-    setThemeState(nextTheme);
+  const systemTheme: ResolvedTheme =
+    Platform.OS === 'web' ? (browserDark ? 'dark' : 'light') : colorScheme === 'dark' ? 'dark' : 'light';
+  const theme: ResolvedTheme = preference === 'system' ? systemTheme : preference;
+
+  function applyAccent(hex: string, name: AccentName | null) {
     setAccentState(name);
     setAccentHexState(hex);
-    setColorScheme(nextTheme);
-    applyDomTheme(nextTheme);
     applyAccentColor(hex);
   }
 
@@ -77,7 +96,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     Promise.all([readPreference(THEME_KEY), readPreference(ACCENT_KEY)]).then(([storedTheme, storedAccent]) => {
       if (cancelled) return;
       const parsed = parseStoredAccent(storedAccent);
-      apply(storedTheme === 'dark' ? 'dark' : 'light', parsed.hex, parsed.name);
+      setPreference(parseStoredTheme(storedTheme));
+      applyAccent(parsed.hex, parsed.name);
       setReady(true);
     });
     return () => {
@@ -85,14 +105,30 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Web: follow the browser's dark mode as it changes.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.matchMedia) return;
+    const query = window.matchMedia(DARK_QUERY);
+    const onChange = () => setBrowserDark(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
+  // Native: hand 'system' to the OS (an explicit scheme would override the phone's setting).
+  // Web: NativeWind's dark: classes need an explicit scheme and the html.dark class.
+  useEffect(() => {
+    setColorScheme(Platform.OS === 'web' ? theme : preference);
+    applyDomTheme(theme);
+  }, [theme, preference, setColorScheme]);
+
   function setTheme(next: ThemePreference) {
-    apply(next, accentHex, accent);
-    void writePreference(THEME_KEY, next);
+    setPreference(next);
+    void writePreference(THEME_KEY, next === 'system' ? null : next);
   }
 
   function setAccent(next: AccentName) {
     const hex = ACCENTS[next][700];
-    apply(theme, hex, next);
+    applyAccent(hex, next);
     persistAccent(next, hex);
   }
 
@@ -100,7 +136,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const hex = normalizeHex(next);
     if (!hex) return;
     const name = parseStoredAccent(hex).name;
-    apply(theme, hex, name);
+    applyAccent(hex, name);
     persistAccent(name, hex);
   }
 
@@ -108,6 +144,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     <ThemeContext.Provider
       value={{
         theme,
+        preference,
         accent,
         accentHex,
         brandColor: getBrandColor(),
