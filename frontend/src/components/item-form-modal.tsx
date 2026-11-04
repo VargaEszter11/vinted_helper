@@ -105,8 +105,10 @@ export function ItemFormModal({
     if (value.trim() !== '' && status === 'in_stock') setStatus('listed');
   }
 
+  /** The reverse: putting an item back in stock clears its listed price. */
   function changeStatus(next: ItemStatus) {
     if (next === 'sold' && soldFor === '') setSoldFor(listedFor);
+    if (next === 'in_stock') edit(setListedFor, 'listedFor')('');
     setStatus(next);
   }
 
