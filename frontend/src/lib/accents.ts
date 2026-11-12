@@ -240,6 +240,12 @@ export function parseStoredAccent(stored: string | null): { hex: string; name: A
   return { hex: ACCENTS[DEFAULT_ACCENT][700], name: DEFAULT_ACCENT };
 }
 
+/** The 300 step for an accent color. Pure, so React can tell when it changes. */
+export function brandTintForHex(hex: string): string {
+  const name = accentNameForHex(hex);
+  return (name ? ACCENTS[name] : paletteFromHex(hex))[300];
+}
+
 let currentPalette: AccentPalette = ACCENTS[DEFAULT_ACCENT];
 
 export function getBrandColor(): string {
