@@ -95,28 +95,7 @@ export function PricesSection({
   const searchPhrase = item.search_phrase.trim() || [item.brand, item.item_type].filter(Boolean).join(' ');
 
   return (
-    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-      <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{t('prices.title')}</Text>
-      <Text className="text-sm text-slate-600 dark:text-slate-300">{t('prices.intro')}</Text>
-
-      <View className="flex-row flex-wrap gap-2">
-        <Button
-          title={t('prices.searchAgain')}
-          icon="refresh-outline"
-          variant="secondary"
-          onPress={onFind}
-          loading={loading}
-          disabled={!canSearch}
-        />
-        <Button
-          title={t('prices.openVinted', { site: vintedHost })}
-          icon="open-outline"
-          variant="secondary"
-          onPress={() => openLink(vintedSearchUrl(searchPhrase, country))}
-          disabled={searchPhrase === ''}
-        />
-      </View>
-
+    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
       {loading ? <Text className="text-sm text-slate-500 dark:text-slate-400">{t('prices.searching')}</Text> : null}
       {error ? <ErrorBanner message={error} /> : null}
 
@@ -129,9 +108,32 @@ export function PricesSection({
           onToggleDropped={() => setShowDropped((current) => !current)}
         />
       ) : null}
+
+      <View className="flex-row flex-wrap gap-2">
+        <Button
+          title={t('prices.searchAgain')}
+          icon="refresh-outline"
+          variant="secondary"
+          size="sm"
+          onPress={onFind}
+          loading={loading}
+          disabled={!canSearch}
+        />
+        <Button
+          title={t('prices.openVinted', { site: vintedHost })}
+          icon="open-outline"
+          variant="secondary"
+          size="sm"
+          onPress={() => openLink(vintedSearchUrl(searchPhrase, country))}
+          disabled={searchPhrase === ''}
+        />
+      </View>
     </View>
   );
 }
+
+/** How many second-hand listings show before "More details". */
+const PREVIEW_LISTINGS = 3;
 
 function PricesResultView({
   data,
@@ -149,74 +151,110 @@ function PricesResultView({
   const t = useT();
   const { web, own_sales: own, verdict } = data;
   const override = parsePrice(overrideText);
+  const [expanded, setExpanded] = useState(false);
+  const listings = web.used.listings;
 
   return (
-    <View className="gap-4">
-      {data.cache ? (
-        <Text className="text-xs text-slate-500 dark:text-slate-400">
-          {t(data.cache.hit ? 'prices.cachedFrom' : 'prices.searchedAt', {
-            when: formatDateTime(data.cache.fetched_at),
-          })}
-        </Text>
-      ) : null}
+    <View className="gap-3">
+      <VerdictBadge verdict={verdict.verdict} leaning={verdict.leaning} />
+      <Text className="text-sm text-slate-700 dark:text-slate-300">{explainVerdict(data, t)}</Text>
 
       {!web.available ? (
-        <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
-          <Ionicons name="warning-outline" size={18} color="#b45309" />
-          <Text className="flex-1 text-sm text-amber-800">
+        <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 dark:border-amber-900 dark:bg-amber-950">
+          <Ionicons name="warning-outline" size={16} color="#b45309" />
+          <Text className="flex-1 text-xs text-amber-800 dark:text-amber-200">
             {web.message ? translateServerMessage(web.message, t) : t('prices.webUnavailable')}
           </Text>
         </View>
       ) : null}
 
       {web.available ? (
-        <>
-          <Block title={t('prices.newPrice')}>
-            {web.new_price ? (
-              <>
-                <Text className="text-sm text-slate-800 dark:text-slate-200">
-                  {formatHuf(web.new_price.min)}
-                  {web.new_price.max !== web.new_price.min ? ` – ${formatHuf(web.new_price.max)}` : ''}
-                  {web.new_price.sources.length > 1
-                    ? `  ${t('prices.median', { value: formatHuf(web.new_price.median) })}`
-                    : ''}
-                </Text>
-                {web.new_price.sources.map((source) => (
-                  <LinkRow
-                    key={source.url}
-                    title={source.title}
-                    url={source.url}
-                    right={formatHuf(source.price)}
-                    detail={source.original ? `${source.original.amount} ${source.original.currency}` : null}
-                  />
-                ))}
-              </>
-            ) : (
-              <Text className="text-sm text-slate-500 dark:text-slate-400">{t('prices.noNewPrice')}</Text>
-            )}
-          </Block>
+        <Text className="text-xs text-slate-600 dark:text-slate-300">
+          <Text className="font-semibold">{t('prices.newPrice')}: </Text>
+          {web.new_price
+            ? `${formatHuf(web.new_price.min)}${
+                web.new_price.max !== web.new_price.min ? ` – ${formatHuf(web.new_price.max)}` : ''
+              }`
+            : t('prices.noNewPrice')}
+        </Text>
+      ) : null}
 
-          <Block title={t('prices.usedListings')}>
-            {web.used.listings.length > 0 ? (
-              web.used.listings.map((listing) => <ListingRow key={listing.url} listing={listing} />)
-            ) : (
-              <Text className="text-sm text-slate-500 dark:text-slate-400">{t('prices.noUsed')}</Text>
-            )}
-            {web.used.dropped.length > 0 ? (
-              <View className="gap-1">
-                <Pressable onPress={onToggleDropped} accessibilityRole="button" className="self-start py-1">
-                  <Text className="text-sm font-medium text-teal-700 dark:text-teal-300">
-                    {t(showDropped ? 'prices.hideDropped' : 'prices.showDropped', {
-                      count: web.used.dropped.length,
-                    })}
-                  </Text>
-                </Pressable>
-                {showDropped
-                  ? web.used.dropped.map((listing) => <ListingRow key={listing.url} listing={listing} muted />)
-                  : null}
-              </View>
-            ) : null}
-          </Block>
+      {own.count > 0 ? (
+        <Text className="text-xs text-slate-600 dark:text-slate-300">
+          <Text className="font-semibold">{t('prices.ownSales')}: </Text>
+          {t('prices.ownSalesSummary', {
+            count: own.count,
+            match: t(own.match === 'brand_category' ? 'prices.matchBrandCategory' : 'prices.matchCategory'),
+            median: formatHuf(own.median_sold_for ?? 0),
+            days:
+              own.median_days_to_sell !== null
+                ? t('prices.daysToSell', { days: own.median_days_to_sell, listed: own.days_samples })
+                : '',
+          })}
+        </Text>
+      ) : null}
+
+      {web.available ? (
+        <View className="gap-2">
+          {(expanded ? listings : listings.slice(0, PREVIEW_LISTINGS)).map((listing) => (
+            <ListingRow key={listing.url} listing={listing} />
+          ))}
+          {listings.length === 0 ? (
+            <Text className="text-xs text-slate-500 dark:text-slate-400">{t('prices.noUsed')}</Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      <Pressable onPress={() => setExpanded((current) => !current)} accessibilityRole="button" className="self-start py-1">
+        <Text className="text-sm font-medium text-teal-700 dark:text-teal-300">
+          {t(expanded ? 'prices.fewerDetails' : 'prices.moreDetails')}
+        </Text>
+      </Pressable>
+
+      {expanded ? (
+        <View className="gap-4">
+          {verdict.estimate ? (
+            <Text className="text-xs text-slate-500 dark:text-slate-400">
+              {t('prices.estimateLine', {
+                estimate: formatHuf(verdict.estimate.value),
+                source: t(SOURCE_KEYS[verdict.estimate.source]),
+                price: formatHuf(data.price),
+                margin: formatHuf(verdict.margin ?? 0),
+                percent: verdict.margin_percent !== null ? ` (${verdict.margin_percent}%)` : '',
+                buyPercent: data.thresholds.buyMarginPercent,
+                buyMin: formatHuf(data.thresholds.buyMinMarginHuf),
+              })}
+            </Text>
+          ) : null}
+
+          {web.available && web.new_price ? (
+            <Block title={t('prices.newPrice')}>
+              {web.new_price.sources.map((source) => (
+                <LinkRow
+                  key={source.url}
+                  title={source.title}
+                  url={source.url}
+                  right={formatHuf(source.price)}
+                  detail={source.original ? `${source.original.amount} ${source.original.currency}` : null}
+                />
+              ))}
+            </Block>
+          ) : null}
+
+          {web.used.dropped.length > 0 ? (
+            <View className="gap-1">
+              <Pressable onPress={onToggleDropped} accessibilityRole="button" className="self-start py-1">
+                <Text className="text-sm font-medium text-teal-700 dark:text-teal-300">
+                  {t(showDropped ? 'prices.hideDropped' : 'prices.showDropped', {
+                    count: web.used.dropped.length,
+                  })}
+                </Text>
+              </Pressable>
+              {showDropped
+                ? web.used.dropped.map((listing) => <ListingRow key={listing.url} listing={listing} muted />)
+                : null}
+            </View>
+          ) : null}
 
           {data.visual.compared > 0 ? (
             <Text className="text-xs text-slate-500 dark:text-slate-400">
@@ -234,55 +272,28 @@ function PricesResultView({
           {web.note ? (
             <Text className="text-xs text-slate-500 dark:text-slate-400">{translateServerMessage(web.note, t)}</Text>
           ) : null}
-        </>
+          {data.cache ? (
+            <Text className="text-xs text-slate-500 dark:text-slate-400">
+              {t(data.cache.hit ? 'prices.cachedFrom' : 'prices.searchedAt', {
+                when: formatDateTime(data.cache.fetched_at),
+              })}
+            </Text>
+          ) : null}
+
+          <View className="gap-2">
+            <PriceField
+              label={t('prices.overrideLabel', { currency: currencySymbol() })}
+              value={overrideText}
+              onChangeText={onOverrideChange}
+              hint={t('prices.overrideHint')}
+              error={overrideText !== '' ? override.error : undefined}
+            />
+            {override.value !== null && !override.error ? (
+              <OverrideVerdict resale={override.value} data={data} />
+            ) : null}
+          </View>
+        </View>
       ) : null}
-
-      <Block title={t('prices.ownSales')}>
-        {own.count > 0 ? (
-          <Text className="text-sm text-slate-800 dark:text-slate-200">
-            {t('prices.ownSalesSummary', {
-              count: own.count,
-              match: t(own.match === 'brand_category' ? 'prices.matchBrandCategory' : 'prices.matchCategory'),
-              median: formatHuf(own.median_sold_for ?? 0),
-              days:
-                own.median_days_to_sell !== null
-                  ? t('prices.daysToSell', { days: own.median_days_to_sell, listed: own.days_samples })
-                  : '',
-            })}
-          </Text>
-        ) : (
-          <Text className="text-sm text-slate-500 dark:text-slate-400">{t('prices.noOwnSales')}</Text>
-        )}
-      </Block>
-
-      <Block title={t('prices.verdict')}>
-        <VerdictBadge verdict={verdict.verdict} leaning={verdict.leaning} />
-        <Text className="text-sm text-slate-700 dark:text-slate-300">{explainVerdict(data, t)}</Text>
-        {verdict.estimate ? (
-          <Text className="text-xs text-slate-500 dark:text-slate-400">
-            {t('prices.estimateLine', {
-              estimate: formatHuf(verdict.estimate.value),
-              source: t(SOURCE_KEYS[verdict.estimate.source]),
-              price: formatHuf(data.price),
-              margin: formatHuf(verdict.margin ?? 0),
-              percent: verdict.margin_percent !== null ? ` (${verdict.margin_percent}%)` : '',
-              buyPercent: data.thresholds.buyMarginPercent,
-              buyMin: formatHuf(data.thresholds.buyMinMarginHuf),
-            })}
-          </Text>
-        ) : null}
-
-        <PriceField
-          label={t('prices.overrideLabel', { currency: currencySymbol() })}
-          value={overrideText}
-          onChangeText={onOverrideChange}
-          hint={t('prices.overrideHint')}
-          error={overrideText !== '' ? override.error : undefined}
-        />
-        {override.value !== null && !override.error ? (
-          <OverrideVerdict resale={override.value} data={data} />
-        ) : null}
-      </Block>
     </View>
   );
 }

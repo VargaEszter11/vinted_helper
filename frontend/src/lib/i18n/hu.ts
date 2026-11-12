@@ -207,6 +207,10 @@ export const hu: Record<keyof typeof en, string> = {
   'buyCheck.hintAi': 'A mesterséges intelligencia javasolta',
   'buyCheck.hintEmpty': 'Nem látszik a fotókon',
 
+  'buyCheck.editDetails': 'Adatok szerkesztése',
+  'buyCheck.hideDetails': 'Adatok elrejtése',
+  'prices.moreDetails': 'További részletek',
+  'prices.fewerDetails': 'Kevesebb részlet',
   'prices.title': 'Árak',
   'prices.intro':
     'Automatikusan lekérdezve a fenti adatok alapján: a webet új árról és használt hirdetésekről keresi (Vinted, Jófogás, eBay és mások, amit a kereső talál). A hirdetések fotóit összeveti a tieiddel. Ha van márka, csak azt keresi. Ha javítasz egy adatot, keress újra.',

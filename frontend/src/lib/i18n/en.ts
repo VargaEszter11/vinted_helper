@@ -205,6 +205,10 @@ export const en = {
   'buyCheck.hintAi': 'Suggested by the AI',
   'buyCheck.hintEmpty': 'Not visible in the photos',
 
+  'buyCheck.editDetails': 'Edit details',
+  'buyCheck.hideDetails': 'Hide details',
+  'prices.moreDetails': 'More details',
+  'prices.fewerDetails': 'Fewer details',
   'prices.title': 'Prices',
   'prices.intro':
     'Looked up automatically for the details above: the web is searched for the new price and for second-hand listings (Vinted, Jófogás, eBay and others, whatever the search finds). The photos of the listings are compared with yours. When the item has a brand, only that brand is searched. If you correct a detail, search again.',

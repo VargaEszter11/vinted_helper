@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { NO_PRICES, PricesSection, type PricesState } from '@/components/buy-check-prices';
 import { PhotoTile, TILE_SIZE } from '@/components/photo-picker';
@@ -17,7 +17,7 @@ import {
   type PricesInput,
   type ResultField,
 } from '@/lib/buy-check';
-import { currencySymbol, errorMessage, formatHuf, parsePrice } from '@/lib/format';
+import { currencySymbol, errorMessage, parsePrice } from '@/lib/format';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { pickPhotos } from '@/lib/photos';
 import type { LocalPhoto } from '@/lib/types';
@@ -299,57 +299,73 @@ function ResultCard({
     return t('buyCheck.hintEmpty');
   };
 
+  const [open, setOpen] = useState(false);
+  const name = edits.suggested_name.trim() || edits.item_type.trim() || t('buyCheck.result');
+  const summary = [edits.brand, edits.size, edits.colour].map((v) => v.trim()).filter(Boolean).join(' · ');
+
   return (
-    <View className="gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-      <View className="flex-row flex-wrap items-center justify-between gap-2">
-        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{t('buyCheck.result')}</Text>
-        <Text className="text-sm text-slate-600 dark:text-slate-300">
+    <View className="gap-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+      <View className="flex-row items-start justify-between gap-2">
+        <View className="flex-1">
+          <Text numberOfLines={2} className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {name}
+          </Text>
+          {summary ? (
+            <Text numberOfLines={1} className="text-xs text-slate-500 dark:text-slate-400">
+              {summary}
+            </Text>
+          ) : null}
+        </View>
+        <Text className="text-xs text-slate-600 dark:text-slate-300">
           {t('buyCheck.confidence')}
           <Text className="font-semibold">{t(CONFIDENCE_KEYS[result.confidence])}</Text>
         </Text>
       </View>
 
       {result.confidence === 'low' ? (
-        <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
-          <Ionicons name="warning-outline" size={18} color="#b45309" />
-          <Text className="flex-1 text-sm text-amber-800">
-            {t('buyCheck.lowHint')}
-          </Text>
+        <View className="flex-row items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 dark:border-amber-900 dark:bg-amber-950">
+          <Ionicons name="warning-outline" size={16} color="#b45309" />
+          <Text className="flex-1 text-xs text-amber-800 dark:text-amber-200">{t('buyCheck.lowHint')}</Text>
         </View>
       ) : null}
 
-      <View className="flex-row items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800">
-        <Text className="text-sm text-slate-600 dark:text-slate-300">{t('buyCheck.yourPrice')}</Text>
-        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">{formatHuf(result.price)}</Text>
-      </View>
+      <Pressable onPress={() => setOpen((current) => !current)} accessibilityRole="button" className="self-start py-1">
+        <Text className="text-sm font-medium text-teal-700 dark:text-teal-300">
+          {t(open ? 'buyCheck.hideDetails' : 'buyCheck.editDetails')}
+        </Text>
+      </Pressable>
 
-      {TEXT_FIELD_KEYS.slice(0, 1).map(({ key, label }) => (
-        <Field key={key} label={t(label)} value={edits[key]} onChangeText={(v) => onEdit(key, v)} hint={hint(key)} />
-      ))}
+      {open ? (
+        <View className="gap-3">
+          {TEXT_FIELD_KEYS.slice(0, 1).map(({ key, label }) => (
+            <Field key={key} label={t(label)} value={edits[key]} onChangeText={(v) => onEdit(key, v)} hint={hint(key)} />
+          ))}
 
-      <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('buyCheck.category')}</Text>
-        <Chips
-          options={categoryOptions}
-          value={edits.category || null}
-          onChange={(value) => onEdit('category', value ?? '')}
-        />
-        <Text className="text-xs text-slate-500 dark:text-slate-400">{hint('category')}</Text>
-      </View>
+          <View className="gap-1">
+            <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('buyCheck.category')}</Text>
+            <Chips
+              options={categoryOptions}
+              value={edits.category || null}
+              onChange={(value) => onEdit('category', value ?? '')}
+            />
+            <Text className="text-xs text-slate-500 dark:text-slate-400">{hint('category')}</Text>
+          </View>
 
-      {TEXT_FIELD_KEYS.slice(1).map(({ key, label }) => (
-        <Field key={key} label={t(label)} value={edits[key]} onChangeText={(v) => onEdit(key, v)} hint={hint(key)} />
-      ))}
+          {TEXT_FIELD_KEYS.slice(1).map(({ key, label }) => (
+            <Field key={key} label={t(label)} value={edits[key]} onChangeText={(v) => onEdit(key, v)} hint={hint(key)} />
+          ))}
 
-      <View className="gap-1">
-        <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('buyCheck.condition')}</Text>
-        <Chips
-          options={conditionOptions}
-          value={edits.condition || null}
-          onChange={(value) => onEdit('condition', value ?? '')}
-        />
-        <Text className="text-xs text-slate-500 dark:text-slate-400">{hint('condition')}</Text>
-      </View>
+          <View className="gap-1">
+            <Text className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('buyCheck.condition')}</Text>
+            <Chips
+              options={conditionOptions}
+              value={edits.condition || null}
+              onChange={(value) => onEdit('condition', value ?? '')}
+            />
+            <Text className="text-xs text-slate-500 dark:text-slate-400">{hint('condition')}</Text>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
