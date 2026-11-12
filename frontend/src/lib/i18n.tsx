@@ -1,11 +1,14 @@
+import { getLocales } from 'expo-localization';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { en } from '@/lib/i18n/en';
 import { hu } from '@/lib/i18n/hu';
 import { readPreference, writePreference } from '@/lib/preferences';
 
 export type Language = 'en' | 'hu';
+/** What the user picked. 'system' follows the device or browser language (the default). */
+export type LanguagePreference = Language | 'system';
 export type MessageKey = keyof typeof en;
 export type Vars = Record<string, string | number>;
 export type Translator = (key: MessageKey, vars?: Vars) => string;
@@ -14,8 +17,10 @@ const STORAGE_KEY = 'language';
 const DICTS: Record<Language, Record<MessageKey, string>> = { en, hu };
 
 type LanguageState = {
+  /** The language actually shown. */
   language: Language;
-  setLanguage: (language: Language) => void;
+  preference: LanguagePreference;
+  setLanguage: (preference: LanguagePreference) => void;
   t: Translator;
   ready: boolean;
 };
@@ -43,6 +48,7 @@ export function getT(): Translator {
 
 const LanguageContext = createContext<LanguageState>({
   language: 'en',
+  preference: 'system',
   setLanguage: () => {},
   t: getT(),
   ready: false,
@@ -53,26 +59,35 @@ function applyDomLanguage(language: Language) {
   document.documentElement.lang = language;
 }
 
-function browserLanguage(): Language {
-  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return 'en';
-  return navigator.language.toLowerCase().startsWith('hu') ? 'hu' : 'en';
+/** The first supported language in the device's (or browser's) preferred list; English otherwise. */
+function deviceLanguage(): Language {
+  try {
+    for (const locale of getLocales()) {
+      const code = locale.languageCode?.toLowerCase();
+      if (code === 'hu' || code === 'en') return code;
+    }
+  } catch {
+    // Fall through to English.
+  }
+  return 'en';
+}
+
+function parseStoredLanguage(stored: string | null): LanguagePreference {
+  return stored === 'hu' || stored === 'en' ? stored : 'system';
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('en');
+  const [preference, setPreference] = useState<LanguagePreference>('system');
+  const [systemLanguage, setSystemLanguage] = useState<Language>(deviceLanguage);
   const [ready, setReady] = useState(false);
 
-  function apply(next: Language) {
-    currentLanguage = next;
-    setLanguageState(next);
-    applyDomLanguage(next);
-  }
+  const language: Language = preference === 'system' ? systemLanguage : preference;
 
   useEffect(() => {
     let cancelled = false;
     readPreference(STORAGE_KEY).then((stored) => {
       if (cancelled) return;
-      apply(stored === 'hu' || stored === 'en' ? stored : browserLanguage());
+      setPreference(parseStoredLanguage(stored));
       setReady(true);
     });
     return () => {
@@ -80,15 +95,36 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  function setLanguage(next: Language) {
-    apply(next);
-    void writePreference(STORAGE_KEY, next);
+  // Follow changes to the device language: the browser fires 'languagechange'; Android can
+  // change it while the app runs, so it is read again whenever the app comes to the front.
+  useEffect(() => {
+    const refresh = () => setSystemLanguage(deviceLanguage());
+    if (Platform.OS === 'web') {
+      if (typeof window === 'undefined') return;
+      window.addEventListener('languagechange', refresh);
+      return () => window.removeEventListener('languagechange', refresh);
+    }
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Read by getT(), which is used outside React (e.g. in error messages).
+    currentLanguage = language;
+    applyDomLanguage(language);
+  }, [language]);
+
+  function setLanguage(next: LanguagePreference) {
+    setPreference(next);
+    void writePreference(STORAGE_KEY, next === 'system' ? null : next);
   }
 
   const t: Translator = (key, vars) => translate(language, key, vars);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t, ready }}>{children}</LanguageContext.Provider>
+    <LanguageContext.Provider value={{ language, preference, setLanguage, t, ready }}>{children}</LanguageContext.Provider>
   );
 }
 

@@ -32,7 +32,8 @@ export const en = {
 
   'settings.appearance': 'Appearance',
   'settings.appearanceHint':
-    'Choose a light or dark theme and a color. Teal is the default if you pick nothing. The choice is saved on this device.',
+    'Choose a theme (System follows your device’s light or dark mode) and a color. Teal is the default if you pick nothing. The choice is saved on this device.',
+  'settings.themeSystem': 'System',
   'settings.themeLight': 'Light',
   'settings.themeDark': 'Dark',
   'settings.accent': 'Color',
@@ -51,7 +52,8 @@ export const en = {
   'accent.orange': 'Orange',
   'accent.emerald': 'Emerald',
   'settings.language': 'Language',
-  'settings.languageHint': 'Choose the language of the app. It is saved on this device.',
+  'settings.languageSystem': 'System',
+  'settings.languageHint': 'Choose the language of the app. System uses your device’s language (Hungarian or English). The choice is saved on this device.',
   'settings.region': 'Country and currency',
   'settings.regionHint':
     'Used for price labels and Buy check. Search results from your country come first. Numbers you already entered are not converted.',

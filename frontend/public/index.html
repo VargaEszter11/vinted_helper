@@ -19,13 +19,25 @@
     <meta name="theme-color" content="#ffffff" />
     <script>
       try {
-        if (localStorage.getItem('vinted-helper-theme') === 'dark') {
+        // No saved choice means "System": follow the browser's dark mode.
+        var theme = localStorage.getItem('vinted-helper-theme');
+        var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (theme === 'dark' || (theme !== 'light' && systemDark)) {
           document.documentElement.classList.add('dark');
           document.documentElement.style.colorScheme = 'dark';
           document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#020617');
         }
+        // No saved choice means "System": use the first of the browser's languages the app has.
         var lang = localStorage.getItem('vinted-helper-language');
-        if (lang === 'hu' || lang === 'en') document.documentElement.lang = lang;
+        if (lang !== 'hu' && lang !== 'en') {
+          lang = 'en';
+          var prefs = navigator.languages || [navigator.language || ''];
+          for (var i = 0; i < prefs.length; i++) {
+            var code = String(prefs[i]).slice(0, 2).toLowerCase();
+            if (code === 'hu' || code === 'en') { lang = code; break; }
+          }
+        }
+        document.documentElement.lang = lang;
       } catch (e) {}
     </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->

@@ -5,7 +5,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { RgbColorPicker } from '@/components/color-picker';
 import { ACCENT_NAMES, ACCENTS } from '@/lib/accents';
-import { useLanguage, type Language, type MessageKey } from '@/lib/i18n';
+import { useLanguage, type LanguagePreference, type MessageKey } from '@/lib/i18n';
 import {
   COUNTRY_CODES,
   CURRENCY_CODES,
@@ -234,16 +234,18 @@ function AccentSwatches() {
 }
 
 export default function SettingsScreen() {
-  const { theme, setTheme } = useTheme();
-  const { language, setLanguage, t } = useLanguage();
+  const { preference, setTheme } = useTheme();
+  const { preference: languagePreference, setLanguage, t } = useLanguage();
   const { country, currency, setCountry, setCurrency } = useRegion();
 
   const themes: { value: ThemePreference; label: string; icon: IconName }[] = [
+    { value: 'system', label: t('settings.themeSystem'), icon: 'contrast-outline' },
     { value: 'light', label: t('settings.themeLight'), icon: 'sunny-outline' },
     { value: 'dark', label: t('settings.themeDark'), icon: 'moon-outline' },
   ];
 
-  const languages: { value: Language; label: string; icon: IconName }[] = [
+  const languages: { value: LanguagePreference; label: string; icon: IconName }[] = [
+    { value: 'system', label: t('settings.languageSystem'), icon: 'phone-portrait-outline' },
     { value: 'en', label: 'English', icon: 'language-outline' },
     { value: 'hu', label: 'Magyar', icon: 'language-outline' },
   ];
@@ -252,11 +254,11 @@ export default function SettingsScreen() {
     <ScrollView className="flex-1 bg-slate-50 dark:bg-slate-950" contentContainerClassName="items-center px-4 py-6">
       <View className="w-full max-w-5xl gap-4">
         <SettingsCard title={t('settings.appearance')} hint={t('settings.appearanceHint')}>
-          <ChoiceRow options={themes} value={theme} onChange={setTheme} />
+          <ChoiceRow options={themes} value={preference} onChange={setTheme} />
           <AccentSwatches />
         </SettingsCard>
         <SettingsCard title={t('settings.language')} hint={t('settings.languageHint')}>
-          <ChoiceRow options={languages} value={language} onChange={setLanguage} />
+          <ChoiceRow options={languages} value={languagePreference} onChange={setLanguage} />
         </SettingsCard>
         <SettingsCard title={t('settings.region')} hint={t('settings.regionHint')}>
           <SettingSelect
