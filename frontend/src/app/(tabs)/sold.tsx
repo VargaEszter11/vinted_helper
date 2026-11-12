@@ -82,76 +82,88 @@ export default function SoldScreen() {
   const rowClass = wide ? 'gap-4 px-4' : 'gap-2 px-3';
   const moneyClass = wide ? 'w-28 text-sm' : 'w-[68px] text-[13px]';
 
+  const listHeader = (
+    <View>
+          <View className="gap-2 px-3 py-3">
+            <SearchField value={query} onChangeText={setQuery} />
+            <View className="flex-row flex-wrap items-center gap-2">
+              {brands.length > 0 ? (
+                <FilterSelect
+                  label={t('filter.brand')}
+                  options={brands.map((brand) => ({ value: brand, label: brand }))}
+                  value={filters.brand}
+                  onChange={(brand) => setFilters((current) => ({ ...current, brand }))}
+                />
+              ) : null}
+              {sizes.length > 0 ? (
+                <FilterSelect
+                  label={t('filter.size')}
+                  options={sizes.map((size) => ({ value: size, label: size }))}
+                  value={filters.size}
+                  onChange={(size) => setFilters((current) => ({ ...current, size }))}
+                />
+              ) : null}
+              <FilterSelect
+                label={t('filter.condition')}
+                options={conditionOptions}
+                value={filters.condition}
+                onChange={(condition) => setFilters((current) => ({ ...current, condition }))}
+              />
+              <CategoryFilterSelect
+                value={filters.category}
+                options={categoryFilterOptions}
+                onChange={(category) => setFilters((current) => ({ ...current, category }))}
+              />
+              <FilterSelect
+                label={t('filter.sort')}
+                clearable={false}
+                keepButtonLabel
+                defaultValue={DEFAULT_ITEM_SORT}
+                options={itemSortOptions(t)}
+                value={sortBy}
+                onChange={(next) => next && setSortBy(next)}
+              />
+              {filtering ? (
+                <Button title={t('filter.clear')} variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
+              ) : null}
+            </View>
+          </View>
+
+          {error && items.length > 0 ? (
+            <View className="px-3 pb-3">
+              <ErrorBanner message={error} />
+            </View>
+          ) : null}
+
+          <View className={`flex-row items-center border-b border-slate-200 py-2 dark:border-slate-800 ${rowClass}`}>
+            <View style={{ width: thumbSize }} />
+            <HeaderText className="flex-1">{t('items.colName')}</HeaderText>
+            <HeaderText className={`text-right ${moneyClass}`}>{t('items.colBought')}</HeaderText>
+            <HeaderText className={`text-right ${moneyClass}`}>{t('sold.colSoldFor')}</HeaderText>
+            {wide ? <HeaderText className="w-28 text-right">{t('sold.colSoldDate')}</HeaderText> : null}
+            <HeaderText className={`text-right ${moneyClass}`}>{t('sold.colProfit')}</HeaderText>
+          </View>
+    </View>
+  );
+
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       <View className="w-full max-w-5xl flex-1 self-center">
-        <View className="gap-2 px-3 py-3">
-          <SearchField value={query} onChangeText={setQuery} />
-          <View className="flex-row flex-wrap items-center gap-2">
-            {brands.length > 0 ? (
-              <FilterSelect
-                label={t('filter.brand')}
-                options={brands.map((brand) => ({ value: brand, label: brand }))}
-                value={filters.brand}
-                onChange={(brand) => setFilters((current) => ({ ...current, brand }))}
-              />
-            ) : null}
-            {sizes.length > 0 ? (
-              <FilterSelect
-                label={t('filter.size')}
-                options={sizes.map((size) => ({ value: size, label: size }))}
-                value={filters.size}
-                onChange={(size) => setFilters((current) => ({ ...current, size }))}
-              />
-            ) : null}
-            <FilterSelect
-              label={t('filter.condition')}
-              options={conditionOptions}
-              value={filters.condition}
-              onChange={(condition) => setFilters((current) => ({ ...current, condition }))}
-            />
-            <CategoryFilterSelect
-              value={filters.category}
-              options={categoryFilterOptions}
-              onChange={(category) => setFilters((current) => ({ ...current, category }))}
-            />
-            <FilterSelect
-              label={t('filter.sort')}
-              clearable={false}
-              keepButtonLabel
-              defaultValue={DEFAULT_ITEM_SORT}
-              options={itemSortOptions(t)}
-              value={sortBy}
-              onChange={(next) => next && setSortBy(next)}
-            />
-            {filtering ? (
-              <Button title={t('filter.clear')} variant="ghost" size="sm" onPress={() => setFilters(NO_FILTERS)} />
-            ) : null}
-          </View>
-        </View>
-
-        {error && items.length > 0 ? (
-          <View className="px-3 pb-3">
-            <ErrorBanner message={error} />
-          </View>
-        ) : null}
-
-        <View className={`flex-row items-center border-b border-slate-200 py-2 dark:border-slate-800 ${rowClass}`}>
-          <View style={{ width: thumbSize }} />
-          <HeaderText className="flex-1">{t('items.colName')}</HeaderText>
-          <HeaderText className={`text-right ${moneyClass}`}>{t('items.colBought')}</HeaderText>
-          <HeaderText className={`text-right ${moneyClass}`}>{t('sold.colSoldFor')}</HeaderText>
-          {wide ? <HeaderText className="w-28 text-right">{t('sold.colSoldDate')}</HeaderText> : null}
-          <HeaderText className={`text-right ${moneyClass}`}>{t('sold.colProfit')}</HeaderText>
-        </View>
 
         {loading ? (
-          <CenteredSpinner />
+          <>
+            {listHeader}
+            <CenteredSpinner />
+          </>
         ) : error && items.length === 0 ? (
-          <ErrorState message={error} onRetry={retry} />
+          <>
+            {listHeader}
+            <ErrorState message={error} onRetry={retry} />
+          </>
         ) : (
           <FlatList
             data={sortedVisible}
+            ListHeaderComponent={listHeader}
             keyExtractor={(item) => item.id}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={getBrandColor()} />
