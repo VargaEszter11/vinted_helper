@@ -1,43 +1,123 @@
 # Vinted Helper
 
-**A stock, sales and buy-check app for second-hand clothing resellers.**
+**A full-stack stock, sales and buy-check app for second-hand clothing resellers.**
 
-Built for people who buy, list and sell on Vinted (and similar marketplaces) and want one place for cost, photos, status and whether the next find is worth buying. Prices use the currency you pick in Settings (Hungarian forint by default).
+Track what you bought, listed and sold. See your profit per item. And when you are standing in a charity shop, photograph a piece and get an instant **BUY / MAYBE / SKIP** verdict based on real asking prices and your own sales history.
 
-- Track what you bought, listed and sold, with photos and profit per item
-- Search, filter and sort by brand, size, condition and Vinted category
-- Bundle items you listed or sold together, with the price split automatically
-- In a shop, **Buy check** identifies an item from photos and suggests BUY / MAYBE / SKIP from web prices and your own sales
+One TypeScript codebase runs on **iPhone, Android and the web**, talking to a small Node.js API backed by Postgres. Everything starts with a single `docker compose up`.
 
+<p>
+  <img alt="Expo" src="https://img.shields.io/badge/Expo-React%20Native-000020?logo=expo&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white">
+  <img alt="Tailwind" src="https://img.shields.io/badge/NativeWind-Tailwind-06B6D4?logo=tailwindcss&logoColor=white">
+  <img alt="Fastify" src="https://img.shields.io/badge/Fastify-Node.js%2022-000000?logo=fastify&logoColor=white">
+  <img alt="Postgres" src="https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white">
+</p>
 
-It is an Expo (React Native) app that runs on iPhone, Android and the web from one codebase, talking to a small Node.js API backed by Postgres.
+> Independent project, not affiliated with or endorsed by Vinted.
+
+## Features
+
+| | |
+| --- | --- |
+| **Inventory and profit** | Items move through *in stock → listed → sold*, with photos, cost, brand, size, measurements, flaws and condition. Profit per item and in total. |
+| **Search, filter, sort** | Full-text search plus filters for brand, size, condition and Vinted category; sort by name, price or last status change. |
+| **Bundles** | Bundle items you list together, or that one buyer buys together. The price is split automatically across the items. |
+| **Buy check** | Identify an item from up to 3 photos using a vision model, look up live second-hand prices, and get a verdict computed in code. |
+| **Themes and i18n** | Light and dark mode, an accent color (swatches or a full RGB picker), English and Hungarian, and country and currency settings. |
+| **Admin tools** | One-file export and import of the whole database (accounts, items, history, photos) for moving between servers. |
+
+## How Buy check works
+
+1. **Identify.** A vision model reads the photos and fills in brand, item type, category, size, colour, material, condition and a search phrase. Anything you typed yourself is never overwritten.
+2. **Find prices.** Web search runs for your country's Vinted site and local marketplace, ranking local results first. A model sorts the results into new-price shops and second-hand listings. The code then verifies that every link comes from the search results and every price appears in the result's own text, so the model cannot invent a listing or a number.
+3. **Compare photos.** For the best second-hand listings, the vision model compares the listing photo with yours. Clearly different items are dropped, and the rest get a "Looks the same / similar" badge.
+4. **Decide.** The verdict is plain code, not a model opinion. The resale estimate is the median of your own similar sales (3 or more), else the second-hand asking median minus 10%, else half the new price. Thin data shows **LOW CONFIDENCE**. All thresholds live in one config object ([`verdict.js`](backend/src/lib/verdict.js)).
+
+Results are cached for 24 hours, requests are rate limited per user, and the API key never leaves the server. The second-hand figures are asking prices, not sold prices, and nothing is requested from Vinted directly.
+
+## Architecture
+
+```
+┌──────────────┐     /api/*     ┌──────────────┐        ┌────────────┐
+│  nginx       │ ─────────────▶ │  Fastify API │ ─────▶ │ PostgreSQL │
+│  (web app)   │                │  (Node 22)   │        └────────────┘
+└──────────────┘                │              │ ─────▶  photos volume
+ Expo web / iOS / Android       └──────┬───────┘
+                                       └────▶  DeepSeek (vision, search)
+```
 
 ```
 frontend/             Expo app (Expo Router, TypeScript, NativeWind/Tailwind)
-backend/              Fastify API (accounts, items, photos) and its Postgres schema
-docker-compose.yml    Runs the API and Postgres together
+backend/              Fastify API (auth, items, photos, buy check) and its Postgres schema
+docker-compose.yaml   Runs nginx + web app, the API and Postgres together
 ```
 
-## 1. Run everything with Docker
+- **Frontend:** Expo SDK 57, React Native 0.86, React 19 with the React Compiler, Expo Router file-based navigation, NativeWind for styling.
+- **Backend:** Fastify 5 with JWT auth, rate limiting and a plain SQL schema applied automatically on start.
+- **Photos:** resized on the device (max 1600 px, JPEG), stored on a volume and served through expiring signed links.
+
+## Quick start
 
 You need [Docker](https://docs.docker.com/get-docker/).
 
 ```sh
-cp .env.example .env     # then set DB_PASSWORD, JWT_SECRET and ADMIN_PASSWORD
+cp .env.example .env     # set DB_PASSWORD, JWT_SECRET and ADMIN_PASSWORD
 docker compose up -d --build
 ```
 
-Open http://localhost:8080 (change `WEB_PORT` in `.env` to use another port). Three containers start:
+Open http://localhost:8080 (change `WEB_PORT` in `.env` for another port), create an account on the sign-in screen and you are in. Set `ALLOW_REGISTRATION=false` once you have yours.
 
-- `db`: Postgres. The schema is applied automatically by the backend on start.
-- `backend`: the API. Photos are stored on the `uploads_data` volume.
-- `frontend`: nginx serving the web app and forwarding `/api/*` to the backend.
+To enable Buy check, add a [DeepSeek API key](https://platform.deepseek.com) as `DEEPSEEK_API_KEY` in `.env` and run `docker compose up -d --force-recreate backend`.
 
-Data lives in the `db_data` and `uploads_data` volumes; `docker compose down` keeps them, `down -v` deletes them.
+## Development
 
-## Backups
+You need Node.js 22 or newer, plus a running Postgres and backend (`cd backend && npm install && npm start`, with `DATABASE_URL` and `JWT_SECRET` set).
 
-Take a backup before updating the app, since the backend applies schema changes on start. Run these in the repo folder while the app is running; each writes a dated file to the current folder.
+```sh
+cd frontend
+cp .env.example .env     # EXPO_PUBLIC_API_URL: the backend's address
+npm install
+npx expo start
+```
+
+- **Web:** press `w`, or open http://localhost:8081.
+- **Phone (Expo Go):** same Wi-Fi, scan the QR code, and set `EXPO_PUBLIC_API_URL` to your computer's LAN address (for example `http://192.168.1.20:3000`), not `localhost`.
+
+Checks: `npx tsc --noEmit` (typecheck) and `npx expo lint` (lint) in `frontend/`.
+
+---
+
+## More details
+
+<details>
+<summary><b>Using the app</b></summary>
+
+- **Items** tab: unsold items with **All / In stock / Listed**, an **Add item** button and a **Mark as sold** action per row. Tap a row to edit it.
+- **Sold** tab: sold items with profit per item (`sold for − bought for`) and the total.
+- **Settings** tab: theme, accent color, language, country and currency. The country is the official Vinted country-site list; it decides which Vinted site Buy check searches and which local results rank first. Choices are saved on the device.
+- **Bought for** is the total cost including fees and shipping. Brand, size, measurements, flaws, condition and category are optional. The form suggests a Vinted-style category from the name and photos.
+- **Bundles you list:** tap **Bundle**, tick items and enter the bundle price. **Sold** on the group sells all of them and splits the price evenly. Setting a bundled item to In stock, or selling it alone, takes it out; a bundle left with one item is dissolved.
+- **Buyer bundles:** in the **Mark as sold** popup, tick **Sold in a bundle with other items**, pick the others and enter the total paid.
+- The category tree lives in [`backend/src/lib/vinted-categories.js`](backend/src/lib/vinted-categories.js). After editing it, run `node scripts/sync-vinted-categories.mjs` from the repo root.
+
+</details>
+
+<details>
+<summary><b>Buy check: configuration and limits</b></summary>
+
+- Each user can make 30 identifications and 20 real price lookups per hour (cache hits are free), with one lookup at a time.
+- When an item has a brand, searches are for that brand only, and open-web results that do not name it are dropped. Spelling variants (Levi's / Levis, H&M) count as the same brand.
+- Provider, model and prompt are constants in [`item-recognition.js`](backend/src/lib/item-recognition.js); photo comparison constants are in [`visual-match.js`](backend/src/lib/visual-match.js). Token usage of every check is logged.
+- To try a list of items from the terminal: `APP_USER=you APP_PASSWORD=... node backend/scripts/try-prices.mjs items.txt` (format at the top of that file).
+
+</details>
+
+<details>
+<summary><b>Backups and restore</b></summary>
+
+Take a backup before updating, since the backend applies schema changes on start. Each command writes a dated file to the current folder.
 
 ```sh
 # Database (items, bundles, users, status history)
@@ -48,9 +128,7 @@ docker run --rm -v vinted_helper_uploads_data:/data -v "$PWD":/backup alpine \
   tar czf /backup/photos-$(date +%F).tar.gz -C /data .
 ```
 
-The volume is named after the repo folder (`vinted_helper_uploads_data` here); check with `docker volume ls` if yours differs.
-
-To restore, start from an empty database (`docker compose down -v`, then `docker compose up -d db`) and run:
+The volume is named after the repo folder; check `docker volume ls` if yours differs. To restore, start from an empty database (`docker compose down -v`, then `docker compose up -d db`) and run:
 
 ```sh
 docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"' < backup-2026-10-16.sql
@@ -59,20 +137,26 @@ docker run --rm -v vinted_helper_uploads_data:/data -v "$PWD":/backup alpine \
 docker compose up -d
 ```
 
-Backup files contain your data and password hashes. Files named like the ones above (`backup-*.sql`, `photos-*.tar.gz`) are git-ignored so they can't be committed by accident; keep copies somewhere safe off the machine.
+Backup files contain your data and password hashes. `backup-*.sql` and `photos-*.tar.gz` are git-ignored; keep copies somewhere safe off the machine. Data lives in the `db_data` and `uploads_data` volumes: `docker compose down` keeps them, `down -v` deletes them.
 
-## Admin panel: moving your data to another server
+</details>
 
-The account named `ADMIN_USERNAME` (default `admin`) gets an **Admin** tab; nobody else sees it, and the server refuses its requests from anyone else. That name cannot be registered through the app: the account is created on start from `ADMIN_PASSWORD` if it does not exist yet (an existing admin is never changed), or it arrives with an import.
+<details>
+<summary><b>Admin panel: moving your data to another server</b></summary>
+
+The account named `ADMIN_USERNAME` (default `admin`) gets an **Admin** tab; nobody else sees it, and the server refuses its requests from anyone else. That name cannot be registered through the app: the account is created on start from `ADMIN_PASSWORD` if missing, or arrives with an import.
 
 - **Export** downloads one `.ndjson` file with everything: accounts (password hashes included), items, bundles, status history and photos.
-- **Import** (web only) replaces everything on the server with the contents of an export file. It is all or nothing: a damaged, cut-off or foreign file is rejected and nothing changes. Because accounts come from the file, you are signed out afterwards and sign in with the imported accounts' passwords, including the `admin` password from the exported server. The file must contain the admin account.
+- **Import** (web only) replaces everything on the server with an export file. It is all or nothing: a damaged, cut-off or foreign file is rejected and nothing changes. You are signed out afterwards and sign in with the imported accounts' passwords. The file must contain the admin account.
 
-To move from your computer to the hosted server: export on the local app, open the hosted app, sign in as its admin (the `ADMIN_PASSWORD` from the server's `.env`), and import the file. Take a [backup](#backups) of the hosted data first if it holds anything you want to keep. Export files contain password hashes, so treat them like backups and don't commit them (`*.ndjson` is git-ignored).
+To move from your computer to a hosted server: export locally, sign in to the hosted app as its admin and import the file. Back up the hosted data first if it holds anything you want to keep. Export files contain password hashes, so never commit them (`*.ndjson` is git-ignored).
 
-## Managing the database with pgAdmin
+</details>
 
-[docker-compose.override.yml](docker-compose.override.yml) is merged in automatically on your machine and publishes Postgres on `127.0.0.1:5434` only. In pgAdmin, register a server with:
+<details>
+<summary><b>Managing the database with pgAdmin</b></summary>
+
+[docker-compose.override.yml](docker-compose.override.yml) is merged in automatically on your machine and publishes Postgres on `127.0.0.1:5434` only (not 5432, so it does not clash with a local Postgres).
 
 | Field | Value |
 | --- | --- |
@@ -81,74 +165,15 @@ To move from your computer to the hosted server: export on the local app, open t
 | Database | your `DB_NAME` |
 | Username / Password | your `DB_USER` / `DB_PASSWORD` |
 
-(5434, not 5432, so it doesn't clash with a Postgres installed on your computer.)
+On a server nothing is published. Run `docker compose -f docker-compose.yaml up -d --build` there to ignore the override, and use an SSH tunnel (`ssh -L 5434:localhost:5432 user@server`) rather than opening the port.
 
-On the server nothing is published: the database is reachable only by the backend inside Docker's network. For a strict setup run `docker compose -f docker-compose.yml up -d --build` there, which ignores the override. To manage the hosted database from pgAdmin, use an SSH tunnel (`ssh -L 5434:localhost:5432 user@server`, with the port published on the server's loopback) rather than opening the port.
+</details>
 
-## Developing without Docker
+<details>
+<summary><b>Deploying</b></summary>
 
-Run Postgres and the backend yourself (`cd backend && npm install && npm start`, with `DATABASE_URL` and `JWT_SECRET` set), then:
+Copy the repo to any server with Docker, create `.env` and run `docker compose up -d --build`. Put HTTPS in front of the `frontend` container (Caddy, Traefik or Cloudflare). Behind your own proxy, replace its `ports:` entry with `expose: ["80"]`.
 
-You need Node.js 22 or newer.
+For a native app build, set `EXPO_PUBLIC_API_URL` to the public address of the API (for example `https://vinted.example.com/api`).
 
-```sh
-cd frontend
-cp .env.example .env     # EXPO_PUBLIC_API_URL: the backend's address
-npm install
-npx expo start
-```
-
-- **Web:** press `w`, or open http://localhost:8081.
-- **Phone (Expo Go):** phone and computer on the same Wi-Fi, scan the QR code. Set `EXPO_PUBLIC_API_URL` to your computer's LAN address (e.g. `http://192.168.1.20:3000`), not `localhost`.
-
-After changing `.env`, restart the dev server (`npx expo start --clear`).
-
-Create an account on the sign-in screen. Set `ALLOW_REGISTRATION=false` in `.env` (and restart the API) to stop new sign-ups once you have yours.
-
-## Deploying
-
-Copy the repo to any server with Docker, create `.env`, and run `docker compose up -d --build`. Put HTTPS in front of the `frontend` container (Caddy, Traefik or Cloudflare). Behind your own proxy, replace its `ports:` entry with `expose: ["80"]`.
-
-For a native app build, set `EXPO_PUBLIC_API_URL` to the public address of the API (e.g. `https://vinted.example.com/api`).
-
-## Buy check
-
-The **Buy check** tab identifies an item from up to 3 photos while you are in a shop. It is separate from the Items and Sold tabs and saves nothing: the last result lives in the app until you tap **Clear / new check**.
-
-Add photos and the price you would pay, optionally fill in what you already know (brand, colour, condition, size), and tap **Check item**. The result shows brand, item type, category, size, colour, material, condition, a suggested name, a search phrase and a confidence level, all editable. Details you typed are kept as yours; the AI only fills in the empty ones.
-
-It needs a DeepSeek API key (https://platform.deepseek.com) in `.env` as `DEEPSEEK_API_KEY`; then run `docker compose up -d --force-recreate backend`. The key stays on the server. Each user can make 30 checks per hour (failed checks do not count). The provider, model and prompt are constants at the top of [`backend/src/lib/item-recognition.js`](backend/src/lib/item-recognition.js). The server logs the token usage of every check.
-
-### Prices and the buy/skip verdict
-
-Right after an item is identified, the app looks up prices by itself (no extra tap); **Search again** repeats it after you correct a detail. It searches the web through DeepSeek's Search API: two open-web queries (price, and used items for sale) plus the Vinted site and local marketplace for the country in Settings. Marketplace searches also return page text so asking prices can be read. Results from that country (local Vinted, the local marketplace, other sites on the same TLD) are ranked first and shown first; foreign Vinted listings are a fallback. The BUY / MAYBE / SKIP estimate uses those local asking prices when at least two were found. A model then reads only those search results, sorts them into new-price shops and second-hand listings and picks out prices; the code checks that every link comes from the results and every price appears in the result's own text (or as a single amount in that snippet). The second-hand figures are **asking prices, not sold prices**. Nothing is requested from Vinted or any other site directly.
-
-Your own sold items (matched by guessing a category from the item name) and the web results give a **BUY / MAYBE / SKIP** verdict, computed in code. All thresholds are in one object, `VERDICT_CONFIG` in [`backend/src/lib/verdict.js`](backend/src/lib/verdict.js). The resale estimate is your own sales median (with 3 or more similar sales), else the second-hand asking median minus 10%, else half the new price. Fewer than 2 used listings, or only a new price, shows **LOW CONFIDENCE**. You can type a typical resale price to recalculate on the spot.
-
-**Only the item's brand:** when the item has a brand, the searches are for that brand only (it is added to the search phrase and put in quotes). The model is told to skip other brands. Open-web results whose title, text or link does not name the brand are dropped (those listings appear under "not used"). Marketplace hits from a branded local Vinted / marketplace query can still be kept when the snippet omits the brand. Without a brand nothing is filtered by brand. A brand's spelling variants (Levi's / Levis, H&M) count as the same.
-
-**Photo comparison:** the search results are text only, so for up to 6 of the kept second-hand listings (your country's sites first, especially local Vinted) the app reads the listing page through DeepSeek's Fetch API to find its photo (DeepSeek loads the page, not this server), and the vision model compares it with your first two photos. Listings that clearly show a different item move to "not used"; the others get a thumbnail and a "Looks the same" / "Looks similar" badge. If a page can't be read or the comparison fails, the listing simply keeps its text-only result. The constants are at the top of [`backend/src/lib/visual-match.js`](backend/src/lib/visual-match.js).
-
-Web results are cached for 24 hours per search phrase (listing photo addresses too; the photo comparison itself depends on your photos, so it runs every time). Each user gets 20 real lookups per hour (a cache hit is free, unless you send photos, which uses one lookup for the comparison), and only one lookup runs per user at a time. To try a list of items from the terminal: `APP_USER=you APP_PASSWORD=... node backend/scripts/try-prices.mjs items.txt` (format at the top of that file).
-
-## How it works
-
-- **Items** tab: unsold items (in stock or listed) with **All / In stock / Listed**, an **Add item** button and a **Mark as sold** action per row. Tap a row to edit it. Each row shows the date its status last changed.
-- **Sold** tab: sold items with profit per item (`sold for − bought for`) and the total profit. Tap a row to edit it.
-- Both lists have a search field (name, brand, size, measurements, flaws), filters for **Brand**, **Size**, **Condition** and **Category**, and **Sort** (name, price, last status change).
-- **Settings** tab: switch theme (light/dark and a color — a few swatches, or tap + for a full RGB picker; teal is the default), language, country and currency. The choices are saved on this device. Country is the official Vinted country-site list (vinted.hu, vinted.de, vinted.com, …); it picks which Vinted site Buy check searches and which local results rank first. Currency is the symbol on every price.
-- **Bought for** is the total cost of the item, including fees and shipping.
-- **Brand**, **Size**, **Measurements**, **Flaws**, **Condition** and **Category** are optional. Condition uses the same scale as Buy check. Category is a Vinted-style leaf (Women's Fashion › Clothing › Jeans, and so on); the form suggests one from the name and photos (same DeepSeek key as Buy check). You can pick another from the tree.
-- The category tree lives in [`backend/src/lib/vinted-categories.js`](backend/src/lib/vinted-categories.js). After editing it, run `node scripts/sync-vinted-categories.mjs` from the repo root so the app copy stays in sync.
-- **Bundles:** tap **Bundle** on the Items tab, tick the items you listed together and enter the bundle price. The items become listed and show as one group. Tap the group to change the price or unbundle; its **Sold** button sells all of them, splitting the sold price evenly (in whole forints) between the items. Setting a bundled item to In stock, or selling it on its own, takes it out of the bundle. A bundle left with a single item is dissolved; that item stays listed.
-- **Buyer bundles:** when a buyer buys several items together, tick **Sold in a bundle with other items** in the **Mark as sold** popup, tick the other items and enter the total they paid. All of them are marked sold and the price is split evenly, like a bundle you listed.
-- Photos are resized on the device (max 1600 px wide, JPEG) before upload and stored on the API's `photos` volume. They are served through signed links that expire.
-- Prices are in Hungarian forint and shown like `4 500 Ft`. Dates use the `YYYY-MM-DD` format.
-
-## Checks
-
-```sh
-cd frontend
-npx tsc --noEmit   # typecheck
-npx expo lint      # lint
-```
+</details>
